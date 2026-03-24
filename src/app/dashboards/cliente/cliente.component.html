@@ -1,0 +1,263 @@
+<div class="dashboard-container">
+ 
+  <!-- ── Sidebar ─────────────────────────────────── -->
+  <aside class="sidebar">
+ 
+    <div class="sidebar-brand">
+      <div class="sidebar-logo-ring">
+        <img src="assets/agatha-logo.png" alt="AGATHA" />
+      </div>
+      <div>
+        <span class="sidebar-brand-name">AGATHA</span>
+        <span class="sidebar-brand-sub">Logistics & Transport</span>
+      </div>
+    </div>
+ 
+    <!-- Badge cliente -->
+    <div class="role-badge">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Portal Cliente</span>
+    </div>
+ 
+    <div class="sidebar-user">
+      <div class="avatar-wrap">
+        <img [src]="user.avatar" alt="Avatar" class="avatar" />
+        <span class="avatar-status"></span>
+      </div>
+      <div class="user-meta">
+        <span class="user-name">{{ user.nombre }}</span>
+        <span class="user-rol">{{ user.rol }}</span>
+      </div>
+    </div>
+ 
+    <div class="sidebar-divider"></div>
+ 
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Mi cuenta</span>
+ 
+      <a class="nav-item" routerLink="seguimientos" routerLinkActive="active">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Mis seguimientos
+      </a>
+ 
+      <a class="nav-item" routerLink="remesas" routerLinkActive="active">
+        <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8m-9 4h4"/></svg>
+        Mis remesas
+      </a>
+ 
+      <span class="nav-section-label">Información</span>
+ 
+      <a class="nav-item" routerLink="historial" routerLinkActive="active">
+        <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+        Historial de envíos
+      </a>
+ 
+      <a class="nav-item" routerLink="ayuda" routerLinkActive="active">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Ayuda y soporte
+      </a>
+    </nav>
+ 
+    <button class="btn-logout" (click)="logout()">
+      <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cerrar sesión
+    </button>
+ 
+  </aside>
+ 
+  <!-- ── Main ───────────────────────────────────── -->
+  <div class="main-content">
+ 
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="topbar-title">Portal Cliente</h1>
+        <span class="topbar-sub">Hola, {{ user.nombre }} — Consulta el estado de tus envíos</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date">{{ today | date:'EEEE, d MMM yyyy' }}</span>
+        <div class="topbar-avatar">
+          <img [src]="user.avatar" alt="Avatar" />
+        </div>
+      </div>
+    </header>
+ 
+    <main class="content">
+ 
+      <!-- ── Buscador de remesa destacado ── -->
+      <div class="search-hero">
+        <div class="search-hero-text">
+          <h2>¿Dónde está tu envío?</h2>
+          <p>Ingresa el número de remesa para ver el estado en tiempo real</p>
+        </div>
+        <div class="search-bar">
+          <span class="search-icon">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input
+            type="text"
+            placeholder="Ej: REM-001"
+            [(ngModel)]="remesaBusqueda"
+            (keyup.enter)="buscarRemesa()"
+          />
+          <button class="search-btn" (click)="buscarRemesa()">Rastrear</button>
+        </div>
+      </div>
+ 
+      <!-- ── KPI resumen cliente ── -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon kpi-blue">
+            <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8m-9 4h4"/></svg>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ stats.totalRemesas }}</span>
+            <span class="kpi-label">Total remesas</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon kpi-gold">
+            <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ stats.enCamino }}</span>
+            <span class="kpi-label">En camino</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon kpi-green">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ stats.entregadas }}</span>
+            <span class="kpi-label">Entregadas</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon kpi-red">
+            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.29"/></svg>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-value">{{ stats.devoluciones }}</span>
+            <span class="kpi-label">Devoluciones</span>
+          </div>
+        </div>
+      </div>
+ 
+      <!-- ── Estados de seguimiento ── -->
+      <div class="section-header">
+        <h2 class="section-title">Estado de mis envíos</h2>
+        <span class="section-line"></span>
+      </div>
+ 
+      <!-- Timeline de estados -->
+      <div class="estados-grid">
+ 
+        <div class="estado-card estado-bodega">
+          <div class="estado-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div class="estado-info">
+            <span class="estado-titulo">Ingresado a bodega</span>
+            <span class="estado-desc">Tu mercancía fue recibida y registrada en nuestras instalaciones</span>
+          </div>
+          <div class="estado-count">{{ stats.enBodega }}</div>
+        </div>
+ 
+        <div class="estado-card estado-camino">
+          <div class="estado-icon">
+            <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div class="estado-info">
+            <span class="estado-titulo">En camino al destino</span>
+            <span class="estado-desc">Tu mercancía está en tránsito hacia la dirección de entrega</span>
+          </div>
+          <div class="estado-count">{{ stats.enCamino }}</div>
+        </div>
+ 
+        <div class="estado-card estado-entregado">
+          <div class="estado-icon">
+            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="estado-info">
+            <span class="estado-titulo">Entrega exitosa</span>
+            <span class="estado-desc">Tu mercancía fue entregada correctamente al destinatario</span>
+          </div>
+          <div class="estado-count">{{ stats.entregadas }}</div>
+        </div>
+ 
+        <div class="estado-card estado-devolucion">
+          <div class="estado-icon">
+            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.29"/></svg>
+          </div>
+          <div class="estado-info">
+            <span class="estado-titulo">Devolución</span>
+            <span class="estado-desc">La mercancía fue devuelta por inconvenientes en la entrega</span>
+          </div>
+          <div class="estado-count">{{ stats.devoluciones }}</div>
+        </div>
+ 
+      </div>
+ 
+      <!-- ── Acciones rápidas cliente ── -->
+      <div class="section-header">
+        <h2 class="section-title">Acciones</h2>
+        <span class="section-line"></span>
+      </div>
+ 
+      <div class="quick-grid">
+        <a class="quick-card" routerLink="seguimientos">
+          <div class="quick-icon">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <div class="quick-text">
+            <span class="quick-label">Ver seguimientos</span>
+            <span class="quick-desc">Consulta el estado de todas tus remesas</span>
+          </div>
+          <svg class="quick-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+ 
+        <a class="quick-card" routerLink="remesas">
+          <div class="quick-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8m-9 4h4"/></svg>
+          </div>
+          <div class="quick-text">
+            <span class="quick-label">Mis remesas</span>
+            <span class="quick-desc">Listado completo de tus mercancías</span>
+          </div>
+          <svg class="quick-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+ 
+        <a class="quick-card" routerLink="historial">
+          <div class="quick-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+          </div>
+          <div class="quick-text">
+            <span class="quick-label">Historial</span>
+            <span class="quick-desc">Envíos anteriores completados</span>
+          </div>
+          <svg class="quick-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+ 
+        <a class="quick-card" routerLink="ayuda">
+          <div class="quick-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="quick-text">
+            <span class="quick-label">Ayuda</span>
+            <span class="quick-desc">Contacta a nuestro equipo de soporte</span>
+          </div>
+          <svg class="quick-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+ 
+      <router-outlet></router-outlet>
+ 
+    </main>
+ 
+    <footer class="footer">
+      <p>© 2025 AGATHA Logistics & Transport · Portal de clientes · Todos los derechos reservados</p>
+    </footer>
+ 
+  </div>
+</div>

@@ -1,0 +1,93 @@
+<div class="tipospago-container" *ngIf="data$ | async as pagos; else cargando">
+  <h2>💳 Gestión de Tipos de Pago</h2>
+
+  <!-- 🔔 Alertas -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    {{ alertaMensaje }}
+    <button class="cerrar" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- Botones de descargas -->
+  <div class="descargas-container">
+    <div class="dropdown" (click)="$event.stopPropagation()">
+      <button class="btn-nuevo1" (click)="toggleDropdown($event)">⬇️ Descargas</button>
+      <ul class="dropdown-menu" *ngIf="dropdownOpen">
+        <li><a class="dropdown-item" (click)="exportarExcel(pagos)">📊 Excel</a></li>
+        <li><a class="dropdown-item" (click)="exportarCSV(pagos)">📄 CSV</a></li>
+        <li><a class="dropdown-item" (click)="exportarWord(pagos)">📝 Word</a></li>
+        <li><a class="dropdown-item" (click)="exportarPDF(pagos)">📕 PDF</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Barra de acciones -->
+  <div class="acciones-bar">
+    <button class="btn-nuevo" (click)="abrirModal()">➕ Nuevo Tipo de Pago</button>
+    <div class="buscadores">
+      <div class="buscador">
+        <input type="text" placeholder="Buscar por nombre..." [(ngModel)]="filtroNombre"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="tabla-wrapper">
+    <table class="tabla-tipospago">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of pagosFiltrados(pagos) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+          <td>{{ p.id }}</td>
+          <td>{{ p.nombre }}</td>
+          <td>
+            <button class="btn-accion consultar" (click)="consultarPago(p.id)"></button>
+            <button class="btn-accion editar" (click)="abrirModal(p)"></button>
+            <button class="btn-accion eliminar" (click)="eliminarPago(p.id)"></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+
+  <!-- Modal de consulta -->
+  <div class="modal" *ngIf="pagoConsultado">
+    <div class="modal-content">
+      <h3>💳 Detalles del Tipo de Pago</h3>
+      <ul class="detalles-pago">
+        <li><strong>ID:</strong> {{ pagoConsultado.id }}</li>
+        <li><strong>Nombre:</strong> {{ pagoConsultado.nombre }}</li>
+      </ul>
+      <div class="modal-buttons">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de crear/editar -->
+  <div class="modal" *ngIf="modalVisible">
+    <div class="modal-content">
+      <h3>{{ editando ? '✏️ Editar Tipo de Pago' : '➕ Nuevo Tipo de Pago' }}</h3>
+      <div class="form-grid">
+        <input placeholder="Nombre del tipo de pago" [(ngModel)]="pagoForm.nombre" required />
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-guardar" (click)="guardarPago()">{{ editando ? 'Actualizar' : 'Crear' }}</button>
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando tipos de pago...</p>
+  </div>
+</ng-template>

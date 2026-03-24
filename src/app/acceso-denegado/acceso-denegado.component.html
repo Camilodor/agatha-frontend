@@ -1,0 +1,11 @@
+<div class="error-container">
+  <div class="error-card">
+    <h1>🚫 Acceso Denegado</h1>
+    <p>No tienes permisos para acceder a esta sección.</p>
+
+    <!-- 🔑 Mostrar texto distinto según login -->
+    <button (click)="volver()">
+      {{ isAuth ? 'Volver a mi panel' : 'Ir al login' }}
+    </button>
+  </div>
+</div>

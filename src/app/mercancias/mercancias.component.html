@@ -1,0 +1,452 @@
+<div class="mercancias-container" *ngIf="data$ | async as data; else cargando">
+
+  <!-- ── Alerta ── -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    <svg viewBox="0 0 24 24">
+      <ng-container *ngIf="alertaTipo==='exito'"><polyline points="20 6 9 17 4 12"/></ng-container>
+      <ng-container *ngIf="alertaTipo==='error'"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></ng-container>
+    </svg>
+    {{ alertaMensaje }}
+    <button class="btn-cerrar-alerta" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h2>Gestión de Mercancías</h2>
+      <p>Registro y control de remesas entrantes</p>
+    </div>
+    <div class="page-header-right">
+      <div class="dropdown">
+        <button class="btn-secondary" (click)="toggleDropdown($event)">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <div class="dropdown-menu" *ngIf="dropdownOpen">
+          <button class="dropdown-item" (click)="exportarExcel(data.mercancias)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Excel</button>
+          <button class="dropdown-item" (click)="exportarCSV(data.mercancias)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV</button>
+          <button class="dropdown-item" (click)="exportarWord(data.mercancias)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Word</button>
+          <button class="dropdown-item" (click)="exportarPDF(data.mercancias)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF</button>
+        </div>
+      </div>
+      <button class="btn-primary" (click)="abrirModal()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nueva mercancía
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Buscar remesa..." [(ngModel)]="filtroRemesa" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <input type="text" placeholder="Buscar origen..." [(ngModel)]="filtroOrigen" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <input type="text" placeholder="Buscar destino..." [(ngModel)]="filtroDestino" />
+    </div>
+    <span class="filters-count">
+      <span>{{ mercanciasFiltradas(data.mercancias).length }}</span> mercancías encontradas
+    </span>
+  </div>
+
+  <!-- ── Tabla ── -->
+  <div class="tabla-wrapper">
+    <table class="tabla-mercancias">
+      <thead>
+        <tr>
+          <th (click)="ordenar('id')" [class.th-active]="sortColumn==='id'">
+            <span class="th-inner">ID <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th (click)="ordenar('numero_remesa')" [class.th-active]="sortColumn==='numero_remesa'">
+            <span class="th-inner">Remesa <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Ruta</th>
+          <th (click)="ordenar('peso')" [class.th-active]="sortColumn==='peso'">
+            <span class="th-inner">Peso <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Unidades</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="mercanciasFiltradas(data.mercancias).length > 0; else sinResultados">
+          <tr *ngFor="let m of mercanciasFiltradas(data.mercancias) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+            <td><span class="id-pill">#{{ m.id }}</span></td>
+            <td>
+              <div class="remesa-cell">
+                <div class="remesa-icon">
+                  <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+                </div>
+                <span class="remesa-num">{{ m.numero_remesa }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="ruta-cell">
+                {{ m.origen_mercancia }}
+                <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                {{ m.destino_mercancia }}
+              </div>
+            </td>
+            <td>{{ m.peso }} kg</td>
+            <td><span class="unidades-badge">{{ m.unidades }} uds</span></td>
+            <td>
+              <span class="estado-badge" [ngClass]="getEstadoClass(m)">
+                {{ getEstado(m) }}
+              </span>
+            </td>
+            <td>
+              <div class="acciones">
+                <button class="btn-row ver" (click)="consultarMercancia(m.id)" title="Ver detalle">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-row editar" (click)="abrirModal(m)" title="Editar">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-row borrar" (click)="eliminarMercancia(m.id)" title="Eliminar">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+        <ng-template #sinResultados>
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+              <p>No se encontraron mercancías con los filtros aplicados</p>
+            </div>
+          </td></tr>
+        </ng-template>
+      </tbody>
+    </table>
+    <div class="paginacion-bar">
+      <span class="paginacion-info">Página {{ page }} · {{ pageSize }} por página</span>
+      <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER DETALLE ══ -->
+  <div class="modal-overlay" *ngIf="mercanciaConsultada" (click)="cerrarConsulta()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon"><svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg></div>
+          <div><h3>Detalle de la mercancía</h3><p>{{ mercanciaConsultada.numero_remesa }}</p></div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarConsulta()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+
+        <div class="form-section">
+          <div class="form-section-title">Remesa</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">N° Remesa</span><span class="detalle-valor">{{ mercanciaConsultada.numero_remesa }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Fecha ingreso</span><span class="detalle-valor">{{ mercanciaConsultada.fecha_ingreso }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Origen</span><span class="detalle-valor">{{ mercanciaConsultada.origen_mercancia }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Destino</span><span class="detalle-valor">{{ mercanciaConsultada.destino_mercancia }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Peso</span><span class="detalle-valor">{{ mercanciaConsultada.peso }} kg</span></div>
+            <div class="detalle-item"><span class="detalle-label">Unidades</span><span class="detalle-valor">{{ mercanciaConsultada.unidades }}</span></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Valores</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Valor declarado</span><span class="detalle-valor">{{ mercanciaConsultada.valor_declarado | currency:'COP':'symbol':'1.0-0' }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Valor flete</span><span class="detalle-valor">{{ mercanciaConsultada.valor_flete | currency:'COP':'symbol':'1.0-0' }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Valor total</span><span class="detalle-valor">{{ mercanciaConsultada.valor_total | currency:'COP':'symbol':'1.0-0' }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Tipo de pago</span><span class="detalle-valor">{{ getNombreTipoPago(mercanciaConsultada.tipo_pago_id, data.tiposPago) }}</span></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Remitente</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Nombre</span><span class="detalle-valor">{{ mercanciaConsultada.nombre_remitente }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Documento</span><span class="detalle-valor">{{ mercanciaConsultada.documento_remitente }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Celular</span><span class="detalle-valor">{{ mercanciaConsultada.celular_remitente }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Dirección</span><span class="detalle-valor">{{ mercanciaConsultada.direccion_remitente }}</span></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Destinatario</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Nombre</span><span class="detalle-valor">{{ mercanciaConsultada.nombre_destinatario }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Documento</span><span class="detalle-valor">{{ mercanciaConsultada.documento_destinatario }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Celular</span><span class="detalle-valor">{{ mercanciaConsultada.celular_destinatario }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Dirección</span><span class="detalle-valor">{{ mercanciaConsultada.direccion_destinatario }}</span></div>
+          </div>
+        </div>
+
+        <div class="form-section" *ngIf="mercanciaConsultada.productos?.length">
+          <div class="form-section-title">Productos incluidos</div>
+          <div class="detalle-productos">
+            <div class="detalle-prod-item" *ngFor="let p of mercanciaConsultada.productos">
+              <span class="detalle-prod-name">{{ p.nombre }}</span>
+              <span class="detalle-prod-cant">{{ p.pivot?.cantidad }} uds</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section" *ngIf="mercanciaConsultada.observaciones">
+          <div class="form-section-title">Observaciones</div>
+          <p style="font-size:0.875rem;color:var(--ag-dark-text);">{{ mercanciaConsultada.observaciones }}</p>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CREAR / EDITAR ══ -->
+  <div class="modal-overlay" *ngIf="modalVisible" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24">
+              <ng-container *ngIf="!editando"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></ng-container>
+              <ng-container *ngIf="editando"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></ng-container>
+            </svg>
+          </div>
+          <div>
+            <h3>{{ editando ? 'Editar mercancía' : 'Nueva mercancía' }}</h3>
+            <p>{{ editando ? 'Modifica los datos del registro' : 'Completa los datos de la remesa' }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- ── Sección: Remesa ── -->
+        <div class="form-section">
+          <div class="form-section-title">Datos de la remesa</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['numero_remesa']">
+              <label>Número de remesa</label>
+              <input placeholder="Ej: REM-001" [(ngModel)]="mercanciaForm.numero_remesa" (ngModelChange)="clearError('numero_remesa')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_remesa']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['numero_remesa'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['fecha_ingreso']">
+              <label>Fecha de ingreso</label>
+              <input type="date" [(ngModel)]="mercanciaForm.fecha_ingreso" (ngModelChange)="clearError('fecha_ingreso')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['fecha_ingreso']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['fecha_ingreso'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['origen_mercancia']">
+              <label>Origen</label>
+              <input placeholder="Ciudad de origen" [(ngModel)]="mercanciaForm.origen_mercancia" (ngModelChange)="clearError('origen_mercancia')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['origen_mercancia']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['origen_mercancia'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['destino_mercancia']">
+              <label>Destino</label>
+              <input placeholder="Ciudad de destino" [(ngModel)]="mercanciaForm.destino_mercancia" (ngModelChange)="clearError('destino_mercancia')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['destino_mercancia']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['destino_mercancia'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['proveedores_id']">
+              <label>Proveedor</label>
+              <select [(ngModel)]="mercanciaForm.proveedores_id" (ngModelChange)="onProveedorChange($event)">
+                <option value="">Seleccione proveedor</option>
+                <option *ngFor="let p of data.proveedores" [value]="p.id">{{ p.nombre }}</option>
+              </select>
+              <span class="field-error-msg" *ngIf="fieldErrors['proveedores_id']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['proveedores_id'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['tipo_pago_id']">
+              <label>Tipo de pago</label>
+              <select [(ngModel)]="mercanciaForm.tipo_pago_id" (ngModelChange)="clearError('tipo_pago_id')">
+                <option value="">Seleccione tipo pago</option>
+                <option *ngFor="let t of data.tiposPago" [value]="t.id">{{ t.nombre }}</option>
+              </select>
+              <span class="field-error-msg" *ngIf="fieldErrors['tipo_pago_id']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['tipo_pago_id'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Sección: Productos ── -->
+        <div class="form-section">
+          <div class="form-section-title">Productos de la remesa</div>
+
+          <div class="productos-section">
+            <!-- Header con selector -->
+            <div class="productos-section-header">
+              <div class="productos-section-title">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                Agregar productos
+              </div>
+            </div>
+
+            <!-- Selector + botón agregar -->
+            <div class="producto-selector">
+              <select [(ngModel)]="productoSeleccionado"
+                      [disabled]="!mercanciaForm.proveedores_id || productosProveedor.length === 0">
+                <option [ngValue]="null">
+                  {{ !mercanciaForm.proveedores_id ? 'Selecciona primero un proveedor' : productosProveedor.length === 0 ? 'Sin productos disponibles' : 'Selecciona un producto...' }}
+                </option>
+                <option *ngFor="let p of productosProveedor" [ngValue]="p">{{ p.nombre }}</option>
+              </select>
+              <button class="btn-agregar" (click)="agregarProducto(productoSeleccionado)"
+                      [disabled]="!productoSeleccionado">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Agregar
+              </button>
+            </div>
+
+            <!-- Lista de productos seleccionados -->
+            <div class="productos-lista">
+              <div class="producto-empty" *ngIf="productosSeleccionados.length === 0">
+                <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <p>Aún no has agregado productos</p>
+              </div>
+
+              <div class="producto-item" *ngFor="let p of productosSeleccionados; let i = index">
+                <div class="prod-item-icon">
+                  <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                </div>
+                <span class="prod-item-name">{{ p.nombre }}</span>
+                <div class="cantidad-wrap">
+                  <span class="cantidad-label">Cant.</span>
+                  <input class="cantidad-input" type="number" min="1" [(ngModel)]="p.cantidad" />
+                </div>
+                <button class="btn-quitar" (click)="eliminarProductoSeleccionado(i)" title="Quitar">
+                  <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Footer con total de unidades -->
+            <div class="productos-footer">
+              <span class="productos-footer-hint">Las unidades se calculan automáticamente</span>
+              <div class="total-unidades">
+                <span class="total-label">Total unidades:</span>
+                <span class="total-value">{{ totalUnidades }}</span>
+                <span class="total-badge" *ngIf="totalUnidades > 0">{{ productosSeleccionados.length }} producto{{ productosSeleccionados.length !== 1 ? 's' : '' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error si no hay productos -->
+          <div class="productos-error" *ngIf="fieldErrors['productos']">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ fieldErrors['productos'] }}
+          </div>
+        </div>
+
+        <!-- ── Sección: Valores ── -->
+        <div class="form-section">
+          <div class="form-section-title">Valores y peso</div>
+          <div class="form-grid-3">
+            <div class="field" [class.field-error]="fieldErrors['peso']">
+              <label>Peso (kg)</label>
+              <input type="number" placeholder="0.0" [(ngModel)]="mercanciaForm.peso" (ngModelChange)="clearError('peso')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['peso']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['peso'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['valor_declarado']">
+              <label>Valor declarado</label>
+              <input type="number" placeholder="$ 0" [(ngModel)]="mercanciaForm.valor_declarado" (ngModelChange)="clearError('valor_declarado')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['valor_declarado']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['valor_declarado'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['valor_flete']">
+              <label>Valor flete</label>
+              <input type="number" placeholder="$ 0" [(ngModel)]="mercanciaForm.valor_flete" (ngModelChange)="clearError('valor_flete')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['valor_flete']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['valor_flete'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['valor_total']">
+              <label>Valor total</label>
+              <input type="number" placeholder="$ 0" [(ngModel)]="mercanciaForm.valor_total" (ngModelChange)="clearError('valor_total')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['valor_total']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['valor_total'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Sección: Remitente ── -->
+        <div class="form-section">
+          <div class="form-section-title">Remitente</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['nombre_remitente']">
+              <label>Nombre</label>
+              <input placeholder="Nombre completo" [(ngModel)]="mercanciaForm.nombre_remitente" (ngModelChange)="clearError('nombre_remitente')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['nombre_remitente']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['nombre_remitente'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['documento_remitente']">
+              <label>Documento</label>
+              <input placeholder="N° documento" [(ngModel)]="mercanciaForm.documento_remitente" (ngModelChange)="clearError('documento_remitente')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['documento_remitente']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['documento_remitente'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['celular_remitente']">
+              <label>Celular</label>
+              <input placeholder="Ej: 3001234567" [(ngModel)]="mercanciaForm.celular_remitente" (ngModelChange)="clearError('celular_remitente')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['celular_remitente']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['celular_remitente'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['direccion_remitente']">
+              <label>Dirección</label>
+              <input placeholder="Dirección" [(ngModel)]="mercanciaForm.direccion_remitente" (ngModelChange)="clearError('direccion_remitente')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['direccion_remitente']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['direccion_remitente'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Sección: Destinatario ── -->
+        <div class="form-section">
+          <div class="form-section-title">Destinatario</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['nombre_destinatario']">
+              <label>Nombre</label>
+              <input placeholder="Nombre completo" [(ngModel)]="mercanciaForm.nombre_destinatario" (ngModelChange)="clearError('nombre_destinatario')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['nombre_destinatario']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['nombre_destinatario'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['documento_destinatario']">
+              <label>Documento</label>
+              <input placeholder="N° documento" [(ngModel)]="mercanciaForm.documento_destinatario" (ngModelChange)="clearError('documento_destinatario')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['documento_destinatario']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['documento_destinatario'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['celular_destinatario']">
+              <label>Celular</label>
+              <input placeholder="Ej: 3001234567" [(ngModel)]="mercanciaForm.celular_destinatario" (ngModelChange)="clearError('celular_destinatario')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['celular_destinatario']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['celular_destinatario'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['direccion_destinatario']">
+              <label>Dirección</label>
+              <input placeholder="Dirección" [(ngModel)]="mercanciaForm.direccion_destinatario" (ngModelChange)="clearError('direccion_destinatario')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['direccion_destinatario']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['direccion_destinatario'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Observaciones ── -->
+        <div class="form-section">
+          <div class="form-section-title">Observaciones</div>
+          <div class="field">
+            <textarea rows="3" placeholder="Observaciones adicionales (opcional)..." [(ngModel)]="mercanciaForm.observaciones"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" (click)="guardarMercancia()">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ editando ? 'Guardar cambios' : 'Registrar mercancía' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando mercancías...</p>
+  </div>
+</ng-template>

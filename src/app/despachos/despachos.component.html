@@ -1,0 +1,426 @@
+<div class="despachos-container" *ngIf="data$ | async as data; else cargando">
+
+  <!-- ── Alerta ── -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    <svg viewBox="0 0 24 24">
+      <ng-container *ngIf="alertaTipo==='exito'"><polyline points="20 6 9 17 4 12"/></ng-container>
+      <ng-container *ngIf="alertaTipo==='error'"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></ng-container>
+    </svg>
+    {{ alertaMensaje }}
+    <button class="btn-cerrar-alerta" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h2>Planillas de Despacho</h2>
+      <p>Gestión de despachos, conductores y mercancías en tránsito</p>
+    </div>
+    <div class="page-header-right">
+      <div class="dropdown">
+        <button class="btn-secondary" (click)="toggleDropdown($event)">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <div class="dropdown-menu" *ngIf="dropdownOpen">
+          <button class="dropdown-item" (click)="exportarExcel(data.despachos)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Excel</button>
+          <button class="dropdown-item" (click)="exportarCSV(data.despachos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV</button>
+          <button class="dropdown-item" (click)="exportarWord(data.despachos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Word</button>
+        </div>
+      </div>
+      <button class="btn-primary" (click)="abrirModal()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nueva planilla
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Buscar por remesa..." [(ngModel)]="filtroRemesa" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <input type="text" placeholder="Buscar por placa..." [(ngModel)]="filtroPlaca" />
+    </div>
+    <span class="filters-count">
+      <span>{{ despachosFiltrados(data.despachos).length }}</span> planillas encontradas
+    </span>
+  </div>
+
+  <!-- ── Tabla ── -->
+  <div class="tabla-wrapper">
+    <table class="tabla-despachos">
+      <thead>
+        <tr>
+          <th (click)="ordenar('id')" [class.th-active]="sortColumn==='id'">
+            <span class="th-inner">Planilla <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Vehículo</th>
+          <th>Mercancías</th>
+          <th (click)="ordenar('fecha_despacho')" [class.th-active]="sortColumn==='fecha_despacho'">
+            <span class="th-inner">Fecha <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Pago conductor</th>
+          <th>QR</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="despachosFiltrados(data.despachos).length > 0; else sinResultados">
+          <tr *ngFor="let d of despachosFiltrados(data.despachos) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+
+            <td>
+              <span class="planilla-num">#{{ d.numero_planilla ?? d.id }}</span>
+            </td>
+
+            <td>
+              <span class="placa-badge">{{ d.vehiculo?.numero_placas ?? d.vehiculos?.numero_placas }}</span>
+            </td>
+
+            <td>
+              <span class="remesas-count">
+                <svg viewBox="0 0 24 24" style="width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+                {{ d.mercancias?.length ?? 1 }} remesa{{ (d.mercancias?.length ?? 1) !== 1 ? 's' : '' }}
+              </span>
+            </td>
+
+            <td>{{ d.fecha_despacho }}</td>
+
+            <td>
+              <div class="pago-info">
+                <span class="pago-neg">{{ d.pago?.negociacion ?? d.negociacion | currency:'COP':'symbol':'1.0-0' }}</span>
+                <span class="pago-saldo">Saldo: {{ d.pago?.saldo ?? d.saldo | currency:'COP':'symbol':'1.0-0' }}</span>
+              </div>
+            </td>
+
+            <td>
+              <div class="qr-cell">
+                <span class="qr-link" *ngIf="d.qr_url" (click)="verQR(d)">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3"/><rect x="16" y="5" width="3" height="3"/><rect x="16" y="16" width="3" height="3"/><rect x="5" y="16" width="3" height="3"/></svg>
+                  Ver QR
+                </span>
+                <span *ngIf="!d.qr_url" style="font-size:0.75rem;color:var(--ag-gray-text);">Sin QR</span>
+              </div>
+            </td>
+
+            <td>
+              <div class="acciones">
+                <button class="btn-row ver" (click)="consultarDespacho(d.id)" title="Ver planilla">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-row pdf" (click)="imprimirPlanilla(d)" title="Imprimir planilla PDF">
+                  <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                </button>
+                <button class="btn-row editar" (click)="abrirModal(d)" title="Editar">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-row borrar" (click)="eliminarDespacho(d.id)" title="Eliminar">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+        </ng-container>
+        <ng-template #sinResultados>
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/></svg>
+              <p>No se encontraron planillas con los filtros aplicados</p>
+            </div>
+          </td></tr>
+        </ng-template>
+      </tbody>
+    </table>
+    <div class="paginacion-bar">
+      <span class="paginacion-info">Página {{ page }} · {{ pageSize }} por página</span>
+      <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER QR ══ -->
+  <div class="modal-overlay" *ngIf="despachoQR" (click)="cerrarQR()">
+    <div class="modal-box modal-box-sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <div><h3>QR Planilla #{{ despachoQR.numero_planilla ?? despachoQR.id }}</h3><p>Escanea para ver los datos de entrega</p></div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarQR()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body" style="text-align:center;padding:2rem 1.75rem;">
+        <img [src]="despachoQR.qr_url" alt="QR Planilla" style="width:220px;height:220px;border-radius:0.75rem;border:1px solid var(--ag-border);margin-bottom:1.25rem;" />
+        <div style="display:flex;gap:0.65rem;justify-content:center;flex-wrap:wrap;">
+          <a [href]="despachoQR.qr_url" target="_blank" class="btn-qr btn-qr-primary">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar PNG
+          </a>
+          <button class="btn-qr btn-qr-secondary" (click)="imprimirPlanilla(despachoQR)">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimir planilla
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER DETALLE ══ -->
+  <div class="modal-overlay" *ngIf="despachoConsultado" (click)="cerrarConsulta()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div><h3>Planilla #{{ despachoConsultado.numero_planilla ?? despachoConsultado.id }}</h3><p>{{ despachoConsultado.fecha_despacho }}</p></div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarConsulta()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+
+        <div class="form-section">
+          <div class="form-section-title">Vehículo y conductor</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Placa</span><span class="detalle-valor">{{ despachoConsultado.vehiculo?.numero_placas }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Marca</span><span class="detalle-valor">{{ despachoConsultado.vehiculo?.marca }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Conductor</span><span class="detalle-valor">{{ despachoConsultado.conductor?.nombre_completo }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Doc. conductor</span><span class="detalle-valor">{{ despachoConsultado.conductor?.numero_documento }}</span></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Pago al conductor</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Tipo pago</span><span class="detalle-valor">{{ despachoConsultado.pago?.tipo_pago ?? despachoConsultado.tipopago?.nombre }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Negociación</span><span class="detalle-valor">{{ (despachoConsultado.pago?.negociacion ?? despachoConsultado.negociacion) | currency:'COP':'symbol':'1.0-0' }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Anticipo</span><span class="detalle-valor">{{ (despachoConsultado.pago?.anticipo ?? despachoConsultado.anticipo) | currency:'COP':'symbol':'1.0-0' }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Saldo</span><span class="detalle-valor">{{ (despachoConsultado.pago?.saldo ?? despachoConsultado.saldo) | currency:'COP':'symbol':'1.0-0' }}</span></div>
+          </div>
+        </div>
+
+        <div class="form-section" *ngIf="despachoConsultado.mercancias?.length">
+          <div class="form-section-title">Mercancías en esta planilla</div>
+          <div class="detalle-mercancias">
+            <div class="detalle-merc-item" *ngFor="let m of despachoConsultado.mercancias">
+              <span class="detalle-merc-rem">{{ m.numero_remesa }}</span>
+              <span class="detalle-merc-ruta">{{ m.origen_mercancia }} → {{ m.destino_mercancia }}</span>
+              <span class="detalle-merc-val">{{ m.valor_flete | currency:'COP':'symbol':'1.0-0' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">QR de la planilla</div>
+          <div class="qr-section">
+            <img *ngIf="despachoConsultado.qr_url" [src]="despachoConsultado.qr_url" class="qr-image" alt="QR Planilla" />
+            <div class="qr-image-placeholder" *ngIf="!despachoConsultado.qr_url">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </div>
+            <div class="qr-actions">
+              <p>Escanea para ver los datos de entrega en el móvil</p>
+              <a *ngIf="despachoConsultado.qr_url" [href]="despachoConsultado.qr_url" target="_blank" class="btn-qr btn-qr-primary">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Descargar QR
+              </a>
+              <button class="btn-qr btn-qr-secondary" (click)="imprimirPlanilla(despachoConsultado)">
+                <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Imprimir planilla
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section" *ngIf="despachoConsultado.observaciones">
+          <div class="form-section-title">Observaciones</div>
+          <p style="font-size:0.875rem;color:var(--ag-dark-text);">{{ despachoConsultado.observaciones }}</p>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+        <button class="btn-guardar" (click)="imprimirPlanilla(despachoConsultado)">
+          <svg viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir planilla
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CREAR / EDITAR ══ -->
+  <div class="modal-overlay" *ngIf="modalVisible" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24">
+              <ng-container *ngIf="!editando"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></ng-container>
+              <ng-container *ngIf="editando"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></ng-container>
+            </svg>
+          </div>
+          <div>
+            <h3>{{ editando ? 'Editar planilla' : 'Nueva planilla de despacho' }}</h3>
+            <p>{{ editando ? 'Modifica los datos del despacho' : 'Crea una nueva planilla para el conductor' }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Vehículo y fecha -->
+        <div class="form-section">
+          <div class="form-section-title">Datos del despacho</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['numero_placas']">
+              <label>Placa del vehículo</label>
+              <input placeholder="Ej: ABC-123" [(ngModel)]="despachoForm.numero_placas" (ngModelChange)="clearError('numero_placas')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_placas']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['numero_placas'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['fecha_despacho']">
+              <label>Fecha de despacho</label>
+              <input type="date" [(ngModel)]="despachoForm.fecha_despacho" (ngModelChange)="clearError('fecha_despacho')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['fecha_despacho']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['fecha_despacho'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['tipo_pago_id']">
+              <label>Tipo de pago al conductor</label>
+              <select [(ngModel)]="despachoForm.tipo_pago_id" (ngModelChange)="clearError('tipo_pago_id')">
+                <option value="">Seleccione tipo de pago</option>
+                <option *ngFor="let p of data.pagos" [value]="p.id">{{ p.nombre }}</option>
+              </select>
+              <span class="field-error-msg" *ngIf="fieldErrors['tipo_pago_id']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['tipo_pago_id'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mercancías -->
+        <div class="form-section">
+          <div class="form-section-title">Mercancías en la planilla</div>
+
+          <div class="mercancias-section">
+            <div class="mercancias-section-header">
+              <div class="mercancias-section-title">
+                <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+                Mercancías disponibles
+              </div>
+            </div>
+
+            <!-- Buscador de remesas -->
+            <div class="remesa-search">
+              <div class="remesa-search-input">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="Filtrar remesas disponibles..." [(ngModel)]="filtroRemesaModal" />
+              </div>
+            </div>
+
+            <!-- Lista disponibles -->
+            <div class="mercancias-disponibles">
+              <ng-container *ngIf="getMercanciasDisponibles(data.mercancias).length > 0; else noDisponibles">
+                <div class="mercancia-disponible-item"
+                     *ngFor="let m of getMercanciasDisponibles(data.mercancias)"
+                     [class.ya-agregada]="estaAgregada(m.id)"
+                     (click)="!estaAgregada(m.id) && agregarMercancia(m)">
+                  <div class="merc-disp-icon">
+                    <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+                  </div>
+                  <div class="merc-disp-info">
+                    <span class="merc-disp-remesa">{{ m.numero_remesa }}</span>
+                    <span class="merc-disp-ruta">{{ m.origen_mercancia }} → {{ m.destino_mercancia }} · {{ m.valor_flete | currency:'COP':'symbol':'1.0-0' }}</span>
+                  </div>
+                  <button class="btn-add-merc" [disabled]="estaAgregada(m.id)">
+                    <svg viewBox="0 0 24 24"><ng-container *ngIf="!estaAgregada(m.id)"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></ng-container><ng-container *ngIf="estaAgregada(m.id)"><polyline points="20 6 9 17 4 12"/></ng-container></svg>
+                  </button>
+                </div>
+              </ng-container>
+              <ng-template #noDisponibles>
+                <div class="no-mercancias-msg">No hay remesas disponibles con ese filtro</div>
+              </ng-template>
+            </div>
+
+            <!-- Seleccionadas -->
+            <div style="padding:0.5rem 1.1rem;background:var(--ag-white);border-top:1px solid var(--ag-border);border-bottom:1px solid var(--ag-border);">
+              <span style="font-size:0.68rem;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;color:var(--ag-dark-text);">En esta planilla</span>
+            </div>
+            <div class="mercancias-seleccionadas">
+              <div class="merc-sel-empty" *ngIf="mercanciasSeleccionadas.length === 0">
+                <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+                <p>Aún no has agregado remesas</p>
+              </div>
+              <div class="merc-sel-item" *ngFor="let m of mercanciasSeleccionadas">
+                <span class="merc-sel-num">{{ m.numero_remesa }}</span>
+                <span class="merc-sel-ruta">{{ m.origen_mercancia }} → {{ m.destino_mercancia }}</span>
+                <span class="merc-sel-valor">{{ m.valor_flete | currency:'COP':'symbol':'1.0-0' }}</span>
+                <button class="btn-quitar-merc" (click)="quitarMercancia(m.id)">
+                  <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="mercancias-footer">
+              <span class="merc-footer-hint">Flete total acumulado</span>
+              <div class="merc-total">
+                <span class="merc-total-label">Total flete:</span>
+                <span class="merc-total-val">{{ totalFlete | currency:'COP':'symbol':'1.0-0' }}</span>
+                <span class="merc-total-badge" *ngIf="mercanciasSeleccionadas.length > 0">{{ mercanciasSeleccionadas.length }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mercancias-error" *ngIf="fieldErrors['mercancias']">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ fieldErrors['mercancias'] }}
+          </div>
+        </div>
+
+        <!-- Pago conductor -->
+        <div class="form-section">
+          <div class="form-section-title">Pago al conductor</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['negociacion']">
+              <label>Negociación</label>
+              <input type="number" placeholder="$ 0" [(ngModel)]="despachoForm.negociacion" (ngModelChange)="clearError('negociacion')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['negociacion']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['negociacion'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['anticipo']">
+              <label>Anticipo</label>
+              <input type="number" placeholder="$ 0" [(ngModel)]="despachoForm.anticipo" (ngModelChange)="clearError('anticipo')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['anticipo']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['anticipo'] }}</span>
+            </div>
+          </div>
+          <!-- Saldo calculado automático -->
+          <div class="saldo-banner">
+            <span class="saldo-banner-label">Saldo a pagar (calculado automáticamente)</span>
+            <span class="saldo-banner-value">{{ saldoCalculado | currency:'COP':'symbol':'1.0-0' }}</span>
+          </div>
+        </div>
+
+        <!-- Observaciones -->
+        <div class="form-section">
+          <div class="form-section-title">Observaciones <span class="label-opt">(opcional)</span></div>
+          <div class="field">
+            <textarea rows="2" placeholder="Observaciones del despacho..." [(ngModel)]="despachoForm.observaciones_mer"></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" (click)="guardarDespacho()">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ editando ? 'Guardar cambios' : 'Crear planilla' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando planillas...</p>
+  </div>
+</ng-template>
