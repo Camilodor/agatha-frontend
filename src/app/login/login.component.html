@@ -1,0 +1,122 @@
+<div class="login-container">
+ 
+  <!-- ── Panel izquierdo — Marca ── -->
+  <div class="brand-panel">
+ 
+    <div class="brand-top">
+      <div class="logo-ring">
+        <img src="assets/agatha-logo.png" alt="AGATHA" />
+      </div>
+      <h1 class="brand-name">AGATHA</h1>
+      <p class="brand-tagline">LOGISTICS &amp; TRANSPORT</p>
+    </div>
+ 
+    <div class="brand-mid">
+      <div class="stat-card">
+        <span class="stat-num">+1,200</span>
+        <span class="stat-label">Despachos realizados</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">98%</span>
+        <span class="stat-label">Entregas a tiempo</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num">24/7</span>
+        <span class="stat-label">Seguimiento en vivo</span>
+      </div>
+    </div>
+ 
+    <p class="brand-footer-text">
+      Gestión inteligente de carga y transporte
+    </p>
+ 
+  </div>
+ 
+  <!-- ── Panel derecho — Formulario ── -->
+  <div class="form-panel">
+    <div class="form-inner">
+ 
+      <div class="form-header">
+        <h2>Bienvenido</h2>
+        <p class="form-subtitle">Inicia sesión en tu cuenta</p>
+      </div>
+ 
+      <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+ 
+        <!-- Usuario o Email -->
+        <div class="form-group">
+          <label class="field-label">Correo electrónico</label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="tucorreo@email.com"
+              name="login"
+              [(ngModel)]="loginData.login"
+              required
+              autocomplete="username"
+            />
+          </div>
+        </div>
+ 
+        <!-- Contraseña -->
+        <div class="form-group">
+          <div class="label-row">
+            <label class="field-label">Contraseña</label>
+            <a href="#" class="forgot-link" (click)="$event.preventDefault()">
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </span>
+            <input
+              type="password"
+              placeholder="••••••••"
+              name="contrasena"
+              [(ngModel)]="loginData.contrasena"
+              required
+              autocomplete="current-password"
+            />
+          </div>
+        </div>
+ 
+        <!-- Botón -->
+        <button
+          type="submit"
+          class="btn-login"
+          [class.loading]="isLoading"
+          [disabled]="!loginForm.valid || isLoading"
+        >
+          Iniciar sesión
+        </button>
+ 
+      </form>
+ 
+      <!-- Error -->
+      <div class="error-message" *ngIf="errorMessage">
+        <svg viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ errorMessage }}
+      </div>
+ 
+      <p class="form-footer-text">
+        ¿No tienes cuenta? <a href="#">Regístrate aquí</a>
+      </p>
+ 
+    </div>
+  </div>
+ 
+</div>

@@ -1,0 +1,375 @@
+<div class="devoluciones-container" *ngIf="data$ | async as data; else cargando">
+
+  <!-- ── Alerta ── -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    <svg viewBox="0 0 24 24">
+      <ng-container *ngIf="alertaTipo==='exito'"><polyline points="20 6 9 17 4 12"/></ng-container>
+      <ng-container *ngIf="alertaTipo==='error'"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></ng-container>
+    </svg>
+    {{ alertaMensaje }}
+    <button class="btn-cerrar-alerta" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h2>Gestión de Devoluciones</h2>
+      <p>Registro y seguimiento de mercancías devueltas</p>
+    </div>
+    <div class="page-header-right">
+      <div class="dropdown">
+        <button class="btn-secondary" (click)="toggleDropdown($event)">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <div class="dropdown-menu" *ngIf="dropdownOpen">
+          <button class="dropdown-item" (click)="exportarExcel(data.devoluciones)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Excel</button>
+          <button class="dropdown-item" (click)="exportarCSV(data.devoluciones)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV</button>
+          <button class="dropdown-item" (click)="exportarWord(data.devoluciones)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Word</button>
+          <button class="dropdown-item" (click)="exportarPDF(data.devoluciones)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF</button>
+        </div>
+      </div>
+      <button class="btn-primary" (click)="abrirModal()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nueva devolución
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Buscar por remesa..." [(ngModel)]="filtroRemesa" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <input type="text" placeholder="Buscar por estado..." [(ngModel)]="filtroEstado" />
+    </div>
+    <span class="filters-count">
+      <span>{{ devolucionesFiltradas(data.devoluciones).length }}</span> devoluciones encontradas
+    </span>
+  </div>
+
+  <!-- ── Tabla ── -->
+  <div class="tabla-wrapper">
+    <table class="tabla-devoluciones">
+      <thead>
+        <tr>
+          <th (click)="ordenar('id')" [class.th-active]="sortColumn==='id'">
+            <span class="th-inner">ID <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th (click)="ordenar('numero_remesa')" [class.th-active]="sortColumn==='numero_remesa'">
+            <span class="th-inner">Remesa <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Motivo</th>
+          <th>Estado</th>
+          <th (click)="ordenar('fecha_devolucion')" [class.th-active]="sortColumn==='fecha_devolucion'">
+            <span class="th-inner">Fecha <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Evidencia</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="devolucionesFiltradas(data.devoluciones).length > 0; else sinResultados">
+          <tr *ngFor="let d of devolucionesFiltradas(data.devoluciones) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+
+            <td><span class="id-pill">#{{ d.id }}</span></td>
+
+            <td><span class="remesa-badge">{{ d.mercancia?.numero_remesa ?? d.mercancias?.numero_remesa ?? d.numero_remesa }}</span></td>
+
+            <td>
+              <div class="motivo-cell">
+                <div class="motivo-icon">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <span class="motivo-text">{{ d.motivo_devolucion }}</span>
+              </div>
+            </td>
+
+            <td>
+              <span class="estado-badge" [ngClass]="getEstadoClass(d.estado_devolucion)">
+                {{ d.estado_devolucion }}
+              </span>
+            </td>
+
+            <td>{{ d.fecha_devolucion | date:'dd/MM/yyyy' }}</td>
+
+            <td>
+              <img *ngIf="d.foto_url" [src]="d.foto_url" class="foto-thumb"
+                   (click)="verFotoGrande(d.foto_url)" title="Ver evidencia" />
+              <div *ngIf="!d.foto_url" class="no-foto" title="Sin evidencia">
+                <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+            </td>
+
+            <td>
+              <div class="acciones">
+                <button class="btn-row ver" (click)="consultarDevolucion(d.id)" title="Ver detalle">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-row foto" (click)="abrirModalFoto(d)" title="Gestionar evidencia">
+                  <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </button>
+                <button class="btn-row editar" (click)="abrirModal(d)" title="Editar">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-row borrar" (click)="eliminarDevolucion(d.id)" title="Eliminar">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+        </ng-container>
+        <ng-template #sinResultados>
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+              <p>No se encontraron devoluciones con los filtros aplicados</p>
+            </div>
+          </td></tr>
+        </ng-template>
+      </tbody>
+    </table>
+    <div class="paginacion-bar">
+      <span class="paginacion-info">Página {{ page }} · {{ pageSize }} por página</span>
+      <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER FOTO GRANDE ══ -->
+  <div class="modal-overlay" *ngIf="fotoGrandeUrl" (click)="cerrarFotoGrande()">
+    <div class="modal-box" (click)="$event.stopPropagation()" style="background:transparent;box-shadow:none;max-width:90vw;">
+      <img [src]="fotoGrandeUrl" class="foto-modal-img" />
+    </div>
+  </div>
+
+  <!-- ══ MODAL GESTIONAR FOTO ══ -->
+  <div class="modal-overlay" *ngIf="modalFotoVisible" (click)="cerrarModalFoto()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon warning">
+            <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <div>
+            <h3>Evidencia fotográfica</h3>
+            <p>Devolución #{{ devolucionFotoActual?.id }} · {{ devolucionFotoActual?.mercancia?.numero_remesa ?? devolucionFotoActual?.numero_remesa }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModalFoto()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Foto de evidencia</div>
+
+          <!-- Foto actual -->
+          <div *ngIf="devolucionFotoActual?.foto_url && !fotoPreviewLocal" class="foto-preview-wrap">
+            <img [src]="devolucionFotoActual.foto_url" class="foto-preview-img" />
+            <div class="foto-preview-actions">
+              <button class="btn-foto-action btn-foto-delete" (click)="eliminarFoto()">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </button>
+            </div>
+            <div style="padding:0.65rem 0.85rem;background:var(--ag-bg);border-top:1px solid var(--ag-border);font-size:0.75rem;color:var(--ag-gray-text);display:flex;align-items:center;justify-content:space-between;">
+              <span>Foto registrada</span>
+              <label style="cursor:pointer;color:var(--ag-navy);font-weight:600;">
+                <input type="file" accept="image/*" (change)="onFileSelected($event)" style="display:none" />
+                Cambiar foto
+              </label>
+            </div>
+          </div>
+
+          <!-- Preview nueva foto -->
+          <div *ngIf="fotoPreviewLocal" class="foto-preview-wrap">
+            <img [src]="fotoPreviewLocal" class="foto-preview-img" />
+            <div class="foto-preview-actions">
+              <button class="btn-foto-action btn-foto-delete" (click)="cancelarFoto()">
+                <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style="padding:0.65rem 0.85rem;background:rgba(217,119,6,0.06);border-top:1px solid rgba(217,119,6,0.15);font-size:0.75rem;color:#92600a;font-weight:500;">
+              Nueva foto lista — presiona "Guardar foto"
+            </div>
+          </div>
+
+          <!-- Spinner -->
+          <div *ngIf="subiendoFoto" class="foto-uploading">
+            <div class="spinner"></div>
+            <span>Subiendo foto...</span>
+          </div>
+
+          <!-- Drag & drop -->
+          <div *ngIf="!devolucionFotoActual?.foto_url && !fotoPreviewLocal && !subiendoFoto"
+               class="foto-upload-area"
+               (click)="fileInput.click()"
+               (dragover)="$event.preventDefault()"
+               (drop)="onDrop($event)">
+            <input #fileInput type="file" accept="image/*" (change)="onFileSelected($event)" />
+            <svg class="foto-upload-icon" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <p class="foto-upload-label">Arrastra la foto aquí o haz click para seleccionar</p>
+            <p class="foto-upload-hint">JPG, PNG o WEBP · máx. 5MB</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModalFoto()">Cerrar</button>
+        <button class="btn-guardar" *ngIf="fotoSeleccionada && !subiendoFoto" (click)="subirFoto()">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Guardar foto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER DETALLE ══ -->
+  <div class="modal-overlay" *ngIf="devolucionConsultada" (click)="cerrarConsulta()">
+    <div class="modal-box modal-box-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          </div>
+          <div>
+            <h3>Detalle de devolución</h3>
+            <p>#{{ devolucionConsultada.id }} · {{ devolucionConsultada.mercancia?.numero_remesa ?? devolucionConsultada.numero_remesa }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarConsulta()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+
+        <div class="form-section">
+          <div class="form-section-title">Información de la devolución</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Remesa</span><span class="detalle-valor">{{ devolucionConsultada.mercancia?.numero_remesa ?? devolucionConsultada.numero_remesa }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Estado</span>
+              <span class="estado-badge" [ngClass]="getEstadoClass(devolucionConsultada.estado_devolucion)">{{ devolucionConsultada.estado_devolucion }}</span>
+            </div>
+            <div class="detalle-item span-2"><span class="detalle-label">Motivo</span><span class="detalle-valor">{{ devolucionConsultada.motivo_devolucion }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Fecha devolución</span><span class="detalle-valor">{{ devolucionConsultada.fecha_devolucion | date:'dd/MM/yyyy' }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Despacho</span><span class="detalle-valor">#{{ devolucionConsultada.despachos_id }}</span></div>
+            <div class="detalle-item span-2" *ngIf="devolucionConsultada.observaciones">
+              <span class="detalle-label">Observaciones</span>
+              <span class="detalle-valor">{{ devolucionConsultada.observaciones }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Evidencia fotográfica</div>
+          <div class="detalle-foto-wrap" *ngIf="devolucionConsultada.foto_url" (click)="verFotoGrande(devolucionConsultada.foto_url)">
+            <img [src]="devolucionConsultada.foto_url" alt="Evidencia de devolución" />
+          </div>
+          <div class="detalle-foto-placeholder" *ngIf="!devolucionConsultada.foto_url">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <p>Sin evidencia fotográfica registrada</p>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+        <button class="btn-guardar" (click)="abrirModalFoto(devolucionConsultada); cerrarConsulta()">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          {{ devolucionConsultada.foto_url ? 'Cambiar evidencia' : 'Agregar evidencia' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CREAR / EDITAR ══ -->
+  <div class="modal-overlay" *ngIf="modalVisible" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24">
+              <ng-container *ngIf="!editando"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></ng-container>
+              <ng-container *ngIf="editando"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></ng-container>
+            </svg>
+          </div>
+          <div>
+            <h3>{{ editando ? 'Editar devolución' : 'Nueva devolución' }}</h3>
+            <p>{{ editando ? 'Modifica los datos del registro' : 'Registra una nueva devolución' }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Datos de la devolución</div>
+          <div class="form-grid">
+
+            <div class="field" [class.field-error]="fieldErrors['numero_remesa']">
+              <label>Número de remesa</label>
+              <input placeholder="Ej: REM-001" [(ngModel)]="devolucionForm.numero_remesa" (ngModelChange)="clearError('numero_remesa')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_remesa']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['numero_remesa'] }}</span>
+            </div>
+
+            <div class="field" [class.field-error]="fieldErrors['despachos_id']">
+              <label>Despacho</label>
+              <select [(ngModel)]="devolucionForm.despachos_id" (ngModelChange)="clearError('despachos_id')">
+                <option value="">Seleccione despacho</option>
+                <option *ngFor="let d of data.despachos" [value]="d.numero_planilla">Planilla #{{ d.numero_planilla }} · {{ d.fecha_despacho }}</option>
+              </select>
+              <span class="field-error-msg" *ngIf="fieldErrors['despachos_id']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['despachos_id'] }}</span>
+            </div>
+
+            <div class="field" [class.field-error]="fieldErrors['fecha_devolucion']">
+              <label>Fecha de devolución</label>
+              <input type="date" [(ngModel)]="devolucionForm.fecha_devolucion" (ngModelChange)="clearError('fecha_devolucion')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['fecha_devolucion']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['fecha_devolucion'] }}</span>
+            </div>
+
+            <div class="field" [class.field-error]="fieldErrors['estado_devolucion']">
+              <label>Estado</label>
+              <select [(ngModel)]="devolucionForm.estado_devolucion" (ngModelChange)="clearError('estado_devolucion')">
+                <option value="Pendiente">Pendiente</option>
+                <option value="Devolucion exitosa">Devolucion exitosa</option>
+                <option value="En proceso">En proceso</option>
+                <option value="Rechazada">Rechazada</option>
+              </select>
+              <span class="field-error-msg" *ngIf="fieldErrors['estado_devolucion']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['estado_devolucion'] }}</span>
+            </div>
+
+            <div class="field span-2" [class.field-error]="fieldErrors['motivo_devolucion']">
+              <label>Motivo de devolución</label>
+              <input placeholder="Describe el motivo..." [(ngModel)]="devolucionForm.motivo_devolucion" (ngModelChange)="clearError('motivo_devolucion')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['motivo_devolucion']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['motivo_devolucion'] }}</span>
+            </div>
+
+            <div class="field span-2">
+              <label>Observaciones <span class="label-opt">(opcional)</span></label>
+              <textarea rows="2" placeholder="Observaciones adicionales..." [(ngModel)]="devolucionForm.observaciones"></textarea>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" (click)="guardarDevolucion()">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ editando ? 'Guardar cambios' : 'Registrar devolución' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando devoluciones...</p>
+  </div>
+</ng-template>

@@ -1,0 +1,390 @@
+.tiposrol-container {
+  padding: 20px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+h2 {
+  font-size: 1.8rem;
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.acciones-bar {
+  display: flex;
+  justify-content:space-evenly;
+  margin-bottom: 15px;
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  background: #f1f3f6;
+  padding: 6px 12px;
+  border-radius: 25px;
+}
+
+.buscador input {
+  border: none;
+  background: transparent;
+  outline: none;
+  padding-left: 8px;
+}
+
+.btn-nuevo {
+  background: #27ae60;
+  color: #fff;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-nuevo1 {
+  background: #308ce2;
+  color: #fff;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.btn-nuevo:hover { background: #219150; }
+.btn-nuevo1:hover { background: #308ce2; }
+
+.tabla-wrapper {
+  overflow-x: auto;
+}
+
+.tabla-tiposrol {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tabla-tiposrol th {
+  background: #34495e;
+  color: #fff;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.tabla-tiposrol td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  color: #2c3e50;
+}
+
+.tabla-tiposrol tr:hover {
+  background: #f9f9f9;
+}
+
+.acciones-col {
+  text-align: center;
+}
+
+.acciones {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+.btn-accion {
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 1.3rem;  /* íconos más grandes */
+  transition: 0.3s;
+}
+
+.btn-accion.editar {   background: url('/assets/usuario.png') no-repeat center center/cover;}
+.btn-accion.eliminar { background: url('/assets/eliminarusuario.png') no-repeat center center/cover; }
+
+.btn-accion:hover { transform: scale(2.1); }
+
+
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  width: 600px;
+  border-radius: 10px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+input, select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-guardar {
+  background: #27ae60;
+  color: #fff;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-cancelar {
+  background: #bdc3c7;
+  color: #2c3e50;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95);}
+  to { opacity: 1; transform: scale(1);}
+}
+.btn-nuevo i {
+  font-size: 1.3rem; 
+}
+
+.acciones-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap; /* se adapta en pantallas pequeñas */
+  gap: 12px;
+}
+
+.buscadores {
+  display: flex;
+  gap: 12px; /* separación entre los dos inputs */
+  align-items: center;
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  background: #f1f3f6;
+  padding: 6px 12px;
+  border-radius: 25px;
+  min-width: 220px;
+}
+
+.buscador i {
+  color: #7f8c8d;
+  font-size: 1rem;
+}
+
+.buscador input {
+  border: none;
+  background: transparent;
+  outline: none;
+  padding-left: 8px;
+  width: 100%;
+  font-size: 0.95rem;
+}
+.tabla-usuarios th {
+  background: #2c3e50;
+  color: #fff;
+  padding: 12px;
+}
+
+.btn-accion.consultar {
+  background: url('/assets/entrevista.png') no-repeat center center/cover;
+}
+
+.btn-accion.consultar i {
+  font-size: 1.1rem;
+}
+
+.detalles-lista {
+  list-style: none;
+  padding: 0;
+}
+
+.detalles-lista li {
+  margin: 6px 0;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+}
+.detalles-tiporol {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+}
+
+.detalles-tiporol li {
+  margin: 0.5rem 0;
+  font-size: 15px;
+}
+/* 🔔 Caja de alertas */
+.alerta {
+  padding: 10px;
+  border-radius: 6px;
+  margin: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+}
+.alerta.exito {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+.alerta.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+.alerta .cerrar {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+}
+/* Spinner */
+.spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* Paginación */
+.paginacion {
+  margin-top: 15px;
+  text-align: center;
+}
+.dropdown-menu {
+  min-width: 180px;
+}
+
+.dropdown-menu i {
+  margin-right: 6px;
+}
+/* Menú de descargas */
+.dropdown-menu {
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 5px 0;
+}
+
+/* Cada opción */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  padding: 10px 15px;
+}
+
+/* Hover con animación */
+.dropdown-item:hover {
+  background-color: #0d6efd; /* azul */
+  color: #fff !important;
+  transform: translateX(5px);
+}
+
+/* Íconos dentro de las opciones */
+.dropdown-item i {
+  transition: transform 0.3s ease;
+}
+
+/* Ícono se mueve al hacer hover */
+.dropdown-item:hover i {
+  transform: translateX(3px);
+}
+/* Botón principal de descargas */
+.btn-nuevo1 {
+  background: #2684ff; /* verde Bootstrap */
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Hover: cambia color y agrega sombra */
+.btn-nuevo1:hover {
+  background: #157347; /* verde más oscuro */
+  box-shadow: 0 0 12px rgba(25, 135, 84, 0.6);
+  transform: translateY(-2px);
+  color: #fff;
+}
+
+/* Ícono dentro del botón */
+.btn-nuevo1 i {
+  transition: transform 0.3s ease;
+}
+
+/* Ícono se mueve un poco al hacer hover */
+.btn-nuevo1:hover i {
+  transform: translateY(-2px);
+}
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+.descargas-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+}

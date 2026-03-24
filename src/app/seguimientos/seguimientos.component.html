@@ -1,0 +1,341 @@
+<div class="seguimientos-container" *ngIf="data$ | async as data; else cargando">
+
+  <!-- ── Alerta ── -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    <svg viewBox="0 0 24 24">
+      <ng-container *ngIf="alertaTipo==='exito'"><polyline points="20 6 9 17 4 12"/></ng-container>
+      <ng-container *ngIf="alertaTipo==='error'"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></ng-container>
+    </svg>
+    {{ alertaMensaje }}
+    <button class="btn-cerrar-alerta" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h2>Seguimiento de Mercancías</h2>
+      <p>Estado en tiempo real de cada remesa en el sistema</p>
+    </div>
+    <div class="page-header-right">
+      <div class="dropdown">
+        <button class="btn-secondary" (click)="toggleDropdown($event)">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <div class="dropdown-menu" *ngIf="dropdownOpen">
+          <button class="dropdown-item" (click)="exportarExcel(data.seguimientos)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Excel</button>
+          <button class="dropdown-item" (click)="exportarCSV(data.seguimientos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV</button>
+          <button class="dropdown-item" (click)="exportarWord(data.seguimientos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Word</button>
+          <button class="dropdown-item" (click)="exportarPDF(data.seguimientos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Buscar por remesa..." [(ngModel)]="filtroRemesa" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <input type="text" placeholder="Buscar por estado..." [(ngModel)]="filtroEstado" />
+    </div>
+    <span class="filters-count">
+      <span>{{ seguimientosFiltrados(data.seguimientos).length }}</span> remesas encontradas
+    </span>
+  </div>
+
+  <!-- ── Tabla ── -->
+  <div class="tabla-wrapper">
+    <table class="tabla-seguimientos">
+      <thead>
+        <tr>
+          <th (click)="ordenar('id')" [class.th-active]="sortColumn==='id'">
+            <span class="th-inner">ID <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Remesa</th>
+          <th>Estado actual</th>
+          <th>Progreso</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="seguimientosFiltrados(data.seguimientos).length > 0; else sinResultados">
+          <tr *ngFor="let s of seguimientosFiltrados(data.seguimientos) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+
+            <td><span class="id-pill">#{{ s.id }}</span></td>
+
+            <td>
+              <div class="remesa-cell">
+                <div class="remesa-icon">
+                  <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 1 0 0-4h14a2 2 0 1 0 0 4M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/></svg>
+                </div>
+                <div class="remesa-info">
+                  <span class="remesa-num">{{ s.mercancia?.numero_remesa ?? s.numero_remesa ?? '—' }}</span>
+                  <span class="remesa-ruta" *ngIf="s.mercancia">{{ s.mercancia.origen_mercancia ?? s.mercancia.origen }} → {{ s.mercancia.destino_mercancia ?? s.mercancia.destino }}</span>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <span class="estado-badge" [ngClass]="getEstadoClass(getEstado(s))">
+                {{ getEstado(s) }}
+              </span>
+            </td>
+
+            <td>
+              <div class="progress-track">
+                <div class="progress-step" [ngClass]="getProgressClass(getEstado(s), 0)"></div>
+                <div class="progress-step" [ngClass]="getProgressClass(getEstado(s), 1)"></div>
+                <div class="progress-step" [ngClass]="getProgressClass(getEstado(s), 2)"></div>
+                <div class="progress-step" [ngClass]="getProgressClass(getEstado(s), 3)"></div>
+              </div>
+            </td>
+
+            <td>
+              <div class="acciones">
+                <button class="btn-row ver" (click)="consultarSeguimiento(s.id)" title="Ver detalle">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-row editar" (click)="abrirModal(s)" title="Actualizar estado">
+                  <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+        </ng-container>
+        <ng-template #sinResultados>
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <p>No se encontraron seguimientos con los filtros aplicados</p>
+            </div>
+          </td></tr>
+        </ng-template>
+      </tbody>
+    </table>
+    <div class="paginacion-bar">
+      <span class="paginacion-info">Página {{ page }} · {{ pageSize }} por página</span>
+      <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+    </div>
+  </div>
+
+  <!-- ══ LIGHTBOX FOTO ══ -->
+  <div class="modal-overlay" *ngIf="fotoGrandeUrl" (click)="fotoGrandeUrl = null" style="z-index:600;">
+    <img [src]="fotoGrandeUrl" style="max-width:90vw;max-height:85vh;border-radius:0.75rem;object-fit:contain;" (click)="$event.stopPropagation()" />
+  </div>
+
+  <!-- ══ MODAL VER DETALLE ══ -->
+  <div class="modal-overlay" *ngIf="seguimientoConsultado" (click)="cerrarConsulta()">
+    <div class="modal-box modal-box-lg" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div>
+            <h3>Seguimiento de remesa</h3>
+            <p>{{ seguimientoConsultado.mercancia?.numero_remesa ?? seguimientoConsultado.numero_remesa }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarConsulta()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+
+        <div class="form-section">
+          <div class="form-section-title">Información de la mercancía</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Remesa</span><span class="detalle-valor">{{ seguimientoConsultado.mercancia?.numero_remesa }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Estado actual</span>
+              <span class="estado-badge" [ngClass]="getEstadoClass(getEstado(seguimientoConsultado))">{{ getEstado(seguimientoConsultado) }}</span>
+            </div>
+            <div class="detalle-item" *ngIf="seguimientoConsultado.mercancia?.origen">
+              <span class="detalle-label">Origen</span>
+              <span class="detalle-valor">{{ seguimientoConsultado.mercancia?.origen_mercancia ?? seguimientoConsultado.mercancia?.origen }}</span>
+            </div>
+            <div class="detalle-item" *ngIf="seguimientoConsultado.mercancia?.destino">
+              <span class="detalle-label">Destino</span>
+              <span class="detalle-valor">{{ seguimientoConsultado.mercancia?.destino_mercancia ?? seguimientoConsultado.mercancia?.destino }}</span>
+            </div>
+            <div class="detalle-item" *ngIf="seguimientoConsultado.ultima_actualizacion">
+              <span class="detalle-label">Última actualización</span>
+              <span class="detalle-valor">{{ seguimientoConsultado.ultima_actualizacion | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="detalle-item" *ngIf="seguimientoConsultado.fecha_ingreso_bodega">
+              <span class="detalle-label">Ingreso a bodega</span>
+              <span class="detalle-valor">{{ seguimientoConsultado.fecha_ingreso_bodega | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeline de estados -->
+        <div class="form-section">
+          <div class="form-section-title">Historial de estados</div>
+          <div class="timeline-detalle">
+            <div class="timeline-step" *ngFor="let paso of getTimeline(seguimientoConsultado.estado); let last = last">
+              <div class="timeline-step-left">
+                <div class="timeline-step-dot" [ngClass]="paso.clase"></div>
+                <div class="timeline-step-line" [ngClass]="paso.lineaClase" *ngIf="!last"></div>
+              </div>
+              <div class="timeline-step-content">
+                <div class="timeline-step-title" [ngClass]="paso.clase">{{ paso.titulo }}</div>
+                <div class="timeline-step-subtitle">{{ paso.descripcion }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evidencia de entrega/devolución -->
+        <div class="form-section" *ngIf="seguimientoConsultado.evidencia">
+          <div class="form-section-title">Evidencia de {{ seguimientoConsultado.evidencia.tipo }}</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Fecha</span><span class="detalle-valor">{{ seguimientoConsultado.evidencia.fecha | date:'dd/MM/yyyy' }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Estado</span>
+              <span class="estado-badge" [ngClass]="getEstadoClass(seguimientoConsultado.evidencia.estado)">{{ seguimientoConsultado.evidencia.estado }}</span>
+            </div>
+            <div class="detalle-item" *ngIf="seguimientoConsultado.evidencia.recibe">
+              <span class="detalle-label">Recibió</span>
+              <span class="detalle-valor">{{ seguimientoConsultado.evidencia.recibe }}</span>
+            </div>
+            <div class="detalle-item" *ngIf="seguimientoConsultado.evidencia.celular">
+              <span class="detalle-label">Celular</span>
+              <span class="detalle-valor">{{ seguimientoConsultado.evidencia.celular }}</span>
+            </div>
+          </div>
+          <!-- Foto de evidencia -->
+          <div *ngIf="seguimientoConsultado.evidencia.foto_url" style="margin-top:0.75rem;">
+            <div style="border-radius:0.75rem;overflow:hidden;border:1px solid var(--ag-border);cursor:pointer;"
+                 (click)="fotoGrandeUrl = seguimientoConsultado.evidencia.foto_url">
+              <img [src]="seguimientoConsultado.evidencia.foto_url"
+                   style="width:100%;height:180px;object-fit:cover;display:block;" />
+            </div>
+            <p style="font-size:0.72rem;color:var(--ag-gray-text);margin-top:0.4rem;text-align:center;">Haz click para ampliar</p>
+          </div>
+          <div *ngIf="!seguimientoConsultado.evidencia.foto_url"
+               style="height:80px;display:flex;align-items:center;justify-content:center;background:var(--ag-bg);border-radius:0.75rem;border:1.5px dashed var(--ag-border);margin-top:0.75rem;">
+            <span style="font-size:0.78rem;color:var(--ag-gray-text);">Sin foto de evidencia registrada</span>
+          </div>
+        </div>
+
+        <!-- Despacho info si aplica -->
+        <div class="form-section" *ngIf="seguimientoConsultado.despacho">
+          <div class="form-section-title">Despacho asignado</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Planilla</span><span class="detalle-valor">#{{ seguimientoConsultado.despacho?.numero_planilla }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Fecha salida</span><span class="detalle-valor">{{ seguimientoConsultado.despacho?.fecha_despacho }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Vehículo</span><span class="detalle-valor">{{ seguimientoConsultado.despacho?.vehiculo?.numero_placas }} · {{ seguimientoConsultado.despacho?.vehiculo?.marca }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Conductor</span><span class="detalle-valor">{{ seguimientoConsultado.despacho?.conductor?.nombre_completo }}</span></div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+        <button class="btn-guardar" (click)="abrirModal(seguimientoConsultado); cerrarConsulta()">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Actualizar estado
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL ACTUALIZAR ESTADO ══ -->
+  <div class="modal-overlay" *ngIf="modalVisible" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          </div>
+          <div>
+            <h3>Actualizar estado</h3>
+            <p>Remesa {{ seguimientoForm.remesa_label ?? seguimientoForm.mercancias_id }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Nuevo estado</div>
+          <!-- Tarjetas de estado -->
+          <div class="estado-cards">
+
+            <div class="estado-card"
+                 [ngClass]="{ selected: seguimientoForm.estado === 'Ingresado a bodega', bodega: seguimientoForm.estado === 'Ingresado a bodega' }"
+                 (click)="seleccionarEstado('Ingresado a bodega')">
+              <div class="estado-card-icon bodega">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div class="estado-card-info">
+                <div class="estado-card-label">Ingresado a bodega</div>
+                <div class="estado-card-desc">Mercancía recibida y registrada</div>
+              </div>
+            </div>
+
+            <div class="estado-card"
+                 [ngClass]="{ selected: seguimientoForm.estado === 'En camino al destino', camino: seguimientoForm.estado === 'En camino al destino' }"
+                 (click)="seleccionarEstado('En camino al destino')">
+              <div class="estado-card-icon camino">
+                <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              </div>
+              <div class="estado-card-info">
+                <div class="estado-card-label">En camino al destino</div>
+                <div class="estado-card-desc">Despachada, en tránsito</div>
+              </div>
+            </div>
+
+            <div class="estado-card"
+                 [ngClass]="{ selected: seguimientoForm.estado === 'Entrega exitosa', entregado: seguimientoForm.estado === 'Entrega exitosa' }"
+                 (click)="seleccionarEstado('Entrega exitosa')">
+              <div class="estado-card-icon entregado">
+                <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              </div>
+              <div class="estado-card-info">
+                <div class="estado-card-label">Entrega exitosa</div>
+                <div class="estado-card-desc">Entregada al destinatario</div>
+              </div>
+            </div>
+
+            <div class="estado-card"
+                 [ngClass]="{ selected: seguimientoForm.estado === 'Devolucion exitosa', devuelto: seguimientoForm.estado === 'Devolucion exitosa' }"
+                 (click)="seleccionarEstado('Devolucion exitosa')">
+              <div class="estado-card-icon devuelto">
+                <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+              </div>
+              <div class="estado-card-info">
+                <div class="estado-card-label">Devolución exitosa</div>
+                <div class="estado-card-desc">Mercancía devuelta</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="field-error-msg" *ngIf="fieldErrors['estado']" style="margin-top:0.65rem;">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            {{ fieldErrors['estado'] }}
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" (click)="guardarSeguimiento()">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+          Actualizar estado
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando seguimientos...</p>
+  </div>
+</ng-template>

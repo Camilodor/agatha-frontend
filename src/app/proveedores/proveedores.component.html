@@ -1,0 +1,269 @@
+<div class="proveedores-container" *ngIf="data$ | async as data; else cargando">
+
+  <!-- ── Alerta ── -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    <svg viewBox="0 0 24 24">
+      <ng-container *ngIf="alertaTipo === 'exito'"><polyline points="20 6 9 17 4 12"/></ng-container>
+      <ng-container *ngIf="alertaTipo === 'error'"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></ng-container>
+    </svg>
+    {{ alertaMensaje }}
+    <button class="btn-cerrar-alerta" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h2>Gestión de Proveedores</h2>
+      <p>Administra los clientes y proveedores del sistema</p>
+    </div>
+    <div class="page-header-right">
+
+      <!-- Exportar -->
+      <div class="dropdown">
+        <button class="btn-secondary" (click)="toggleDropdown($event)">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <div class="dropdown-menu" *ngIf="dropdownOpen">
+          <button class="dropdown-item" (click)="exportarExcel(data.proveedores)">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Excel
+          </button>
+          <button class="dropdown-item" (click)="exportarCSV(data.proveedores)">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV
+          </button>
+          <button class="dropdown-item" (click)="exportarWord(data.proveedores)">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Word
+          </button>
+          <button class="dropdown-item" (click)="exportarPDF(data.proveedores)">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-primary" (click)="abrirModal()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo proveedor
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Buscar por nombre..." [(ngModel)]="filtroNombre" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <input type="text" placeholder="Buscar por documento..." [(ngModel)]="filtroDocumento" />
+    </div>
+    <span class="filters-count">
+      <span>{{ proveedoresFiltrados(data.proveedores).length }}</span> proveedores encontrados
+    </span>
+  </div>
+
+  <!-- ── Tabla ── -->
+  <div class="tabla-wrapper">
+    <table class="tabla-proveedores">
+      <thead>
+        <tr>
+          <th (click)="ordenar('id')" [class.th-active]="sortColumn==='id'">
+            <span class="th-inner">ID <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th (click)="ordenar('nombre')" [class.th-active]="sortColumn==='nombre'">
+            <span class="th-inner">Proveedor <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th (click)="ordenar('descripcion')" [class.th-active]="sortColumn==='descripcion'">
+            <span class="th-inner">Descripción <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Usuario asignado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="proveedoresFiltrados(data.proveedores).length > 0; else sinResultados">
+          <tr *ngFor="let p of proveedoresFiltrados(data.proveedores) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+
+            <td><span class="id-pill">#{{ p.id }}</span></td>
+
+            <td>
+              <div class="prov-cell">
+                <div class="prov-avatar">{{ getInitials(p.nombre) }}</div>
+                <div class="prov-cell-info">
+                  <span class="prov-cell-name">{{ p.nombre }}</span>
+                  <span class="prov-cell-sub" *ngIf="p.descripcion">{{ p.descripcion | slice:0:40 }}{{ p.descripcion?.length > 40 ? '...' : '' }}</span>
+                </div>
+              </div>
+            </td>
+
+            <td>{{ p.descripcion || '—' }}</td>
+
+            <td>
+              <span class="usuario-badge" *ngIf="p.usuario">
+                <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                {{ p.usuario?.nombre_completo || p.usuario?.nombres }} · {{ p.usuario?.numero_documento }}
+              </span>
+              <span *ngIf="!p.usuario" style="color: var(--ag-gray-text); font-size: 0.82rem;">Sin asignar</span>
+            </td>
+
+            <td>
+              <div class="acciones">
+                <button class="btn-row ver" (click)="consultarProveedor(p.id)" title="Ver detalle">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-row editar" (click)="abrirModal(p)" title="Editar">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-row borrar" (click)="eliminarProveedor(p.id)" title="Eliminar">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+        </ng-container>
+        <ng-template #sinResultados>
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <p>No se encontraron proveedores con los filtros aplicados</p>
+            </div>
+          </td></tr>
+        </ng-template>
+      </tbody>
+    </table>
+    <div class="paginacion-bar">
+      <span class="paginacion-info">Página {{ page }} · {{ pageSize }} por página</span>
+      <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER DETALLE ══ -->
+  <div class="modal-overlay" *ngIf="proveedorConsultado" (click)="cerrarConsulta()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div>
+            <h3>Detalle del proveedor</h3>
+            <p>Información completa del registro</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarConsulta()">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Información del proveedor</div>
+          <div class="detalle-grid">
+            <div class="detalle-item">
+              <span class="detalle-label">ID</span>
+              <span class="detalle-valor">#{{ proveedorConsultado.id }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-label">Nombre</span>
+              <span class="detalle-valor">{{ proveedorConsultado.nombre }}</span>
+            </div>
+            <div class="detalle-item span-2">
+              <span class="detalle-label">Descripción</span>
+              <span class="detalle-valor">{{ proveedorConsultado.descripcion || '—' }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-label">Usuario asignado</span>
+              <span class="detalle-valor">{{ proveedorConsultado.usuario?.nombre_completo || proveedorConsultado.usuario?.nombres || '—' }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-label">Documento usuario</span>
+              <span class="detalle-valor">{{ proveedorConsultado.usuario?.numero_documento || '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CREAR / EDITAR ══ -->
+  <div class="modal-overlay" *ngIf="modalVisible" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24">
+              <ng-container *ngIf="!editando"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></ng-container>
+              <ng-container *ngIf="editando"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></ng-container>
+            </svg>
+          </div>
+          <div>
+            <h3>{{ editando ? 'Editar proveedor' : 'Nuevo proveedor' }}</h3>
+            <p>{{ editando ? 'Modifica los datos del registro' : 'Completa los datos del proveedor' }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModal()">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Datos del proveedor</div>
+          <div class="form-grid">
+
+            <div class="field" [class.field-error]="fieldErrors['nombre']">
+              <label>Nombre del proveedor</label>
+              <input placeholder="Ej: Distribuidora XYZ" [(ngModel)]="proveedorForm.nombre"
+                     (ngModelChange)="clearError('nombre')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['nombre']">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {{ fieldErrors['nombre'] }}
+              </span>
+            </div>
+
+            <div class="field" [class.field-error]="fieldErrors['numero_documento']">
+              <label>Documento del usuario asignado</label>
+              <input placeholder="Ej: 1234567890" [(ngModel)]="proveedorForm.numero_documento"
+                     (ngModelChange)="clearError('numero_documento')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_documento']">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {{ fieldErrors['numero_documento'] }}
+              </span>
+            </div>
+
+            <div class="field span-2" [class.field-error]="fieldErrors['descripcion']">
+              <label>Descripción <span style="font-weight:400; text-transform:none; letter-spacing:0; color:var(--ag-gray-text)">(opcional)</span></label>
+              <textarea rows="3" placeholder="Descripción del proveedor o cliente..."
+                        [(ngModel)]="proveedorForm.descripcion"
+                        (ngModelChange)="clearError('descripcion')"></textarea>
+              <span class="field-error-msg" *ngIf="fieldErrors['descripcion']">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {{ fieldErrors['descripcion'] }}
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" (click)="guardarProveedor()">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ editando ? 'Guardar cambios' : 'Crear proveedor' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando proveedores...</p>
+  </div>
+</ng-template>

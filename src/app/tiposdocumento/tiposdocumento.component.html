@@ -1,0 +1,93 @@
+<div class="tiposdocumento-container" *ngIf="data$ | async as documentos; else cargando">
+  <h2>📑 Gestión de Tipos de Documento</h2>
+
+  <!-- 🔔 Alertas -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    {{ alertaMensaje }}
+    <button class="cerrar" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- Botones de descargas -->
+  <div class="descargas-container">
+    <div class="dropdown" (click)="$event.stopPropagation()">
+      <button class="btn-nuevo1" (click)="toggleDropdown($event)">⬇️ Descargas</button>
+      <ul class="dropdown-menu" *ngIf="dropdownOpen">
+        <li><a class="dropdown-item" (click)="exportarExcel(documentos)">📊 Excel</a></li>
+        <li><a class="dropdown-item" (click)="exportarCSV(documentos)">📄 CSV</a></li>
+        <li><a class="dropdown-item" (click)="exportarWord(documentos)">📝 Word</a></li>
+        <li><a class="dropdown-item" (click)="exportarPDF(documentos)">📕 PDF</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Barra de acciones -->
+  <div class="acciones-bar">
+    <button class="btn-nuevo" (click)="abrirModal()">➕ Nuevo Documento</button>
+    <div class="buscadores">
+      <div class="buscador">
+        <input type="text" placeholder="Buscar por nombre..." [(ngModel)]="filtroNombre"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="tabla-wrapper">
+    <table class="tabla-tiposdocumento">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let d of documentosFiltrados(documentos) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+          <td>{{ d.id }}</td>
+          <td>{{ d.nombre }}</td>
+          <td>
+            <button class="btn-accion consultar" (click)="consultarDocumento(d.id)"></button>
+            <button class="btn-accion editar" (click)="abrirModal(d)"></button>
+            <button class="btn-accion eliminar" (click)="eliminarDocumento(d.id)"></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+
+  <!-- Modal de consulta -->
+  <div class="modal" *ngIf="docConsultado">
+    <div class="modal-content">
+      <h3>📑 Detalles del Documento</h3>
+      <ul class="detalles-documento">
+        <li><strong>ID:</strong> {{ docConsultado.id }}</li>
+        <li><strong>Nombre:</strong> {{ docConsultado.nombre }}</li>
+      </ul>
+      <div class="modal-buttons">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de crear/editar -->
+  <div class="modal" *ngIf="modalVisible">
+    <div class="modal-content">
+      <h3>{{ editando ? '✏️ Editar Documento' : '➕ Nuevo Documento' }}</h3>
+      <div class="form-grid">
+        <input placeholder="Nombre del documento" [(ngModel)]="docForm.nombre" required />
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-guardar" (click)="guardarDocumento()">{{ editando ? 'Actualizar' : 'Crear' }}</button>
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando tipos de documento...</p>
+  </div>
+</ng-template>

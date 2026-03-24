@@ -1,0 +1,274 @@
+<div class="productos-container" *ngIf="data$ | async as data; else cargando">
+
+  <!-- ── Alerta ── -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    <svg viewBox="0 0 24 24">
+      <ng-container *ngIf="alertaTipo==='exito'"><polyline points="20 6 9 17 4 12"/></ng-container>
+      <ng-container *ngIf="alertaTipo==='error'"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></ng-container>
+    </svg>
+    {{ alertaMensaje }}
+    <button class="btn-cerrar-alerta" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h2>Gestión de Productos</h2>
+      <p>Administra el catálogo de productos por proveedor</p>
+    </div>
+    <div class="page-header-right">
+      <div class="dropdown">
+        <button class="btn-secondary" (click)="toggleDropdown($event)">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <div class="dropdown-menu" *ngIf="dropdownOpen">
+          <button class="dropdown-item" (click)="exportarExcel(data.productos)">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Excel
+          </button>
+          <button class="dropdown-item" (click)="exportarCSV(data.productos)">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV
+          </button>
+          <button class="dropdown-item" (click)="exportarWord(data.productos)">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Word
+          </button>
+          <button class="dropdown-item" (click)="exportarPDF(data.productos)">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF
+          </button>
+        </div>
+      </div>
+      <button class="btn-primary" (click)="abrirModal()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo producto
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Buscar por nombre..." [(ngModel)]="filtroNombre" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <input type="text" placeholder="Buscar por proveedor..." [(ngModel)]="filtroProveedor" />
+    </div>
+    <span class="filters-count">
+      <span>{{ productosFiltrados(data.productos, data.proveedores).length }}</span> productos encontrados
+    </span>
+  </div>
+
+  <!-- ── Tabla ── -->
+  <div class="tabla-wrapper">
+    <table class="tabla-productos">
+      <thead>
+        <tr>
+          <th (click)="ordenar('id')" [class.th-active]="sortColumn==='id'">
+            <span class="th-inner">ID <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th (click)="ordenar('nombre')" [class.th-active]="sortColumn==='nombre'">
+            <span class="th-inner">Producto <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Descripción</th>
+          <th (click)="ordenar('proveedores')" [class.th-active]="sortColumn==='proveedores'">
+            <span class="th-inner">Proveedor <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="productosFiltrados(data.productos, data.proveedores).length > 0; else sinResultados">
+          <tr *ngFor="let p of productosFiltrados(data.productos, data.proveedores) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+
+            <td><span class="id-pill">#{{ p.id }}</span></td>
+
+            <td>
+              <div class="prod-cell">
+                <div class="prod-avatar">
+                  <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                </div>
+                <span class="prod-name">{{ p.nombre }}</span>
+              </div>
+            </td>
+
+            <td>{{ p.descripcion || '—' }}</td>
+
+            <td>
+              <span class="prov-badge" *ngIf="p.proveedores">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                {{ p.proveedores?.nombre }}
+              </span>
+              <span *ngIf="!p.proveedores" style="color:var(--ag-gray-text);font-size:0.82rem;">Sin proveedor</span>
+            </td>
+
+            <td>
+              <div class="acciones">
+                <button class="btn-row ver" (click)="consultarProducto(p.id)" title="Ver detalle">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-row editar" (click)="abrirModal(p)" title="Editar">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-row borrar" (click)="eliminarProducto(p.id)" title="Eliminar">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+        </ng-container>
+        <ng-template #sinResultados>
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <p>No se encontraron productos con los filtros aplicados</p>
+            </div>
+          </td></tr>
+        </ng-template>
+      </tbody>
+    </table>
+    <div class="paginacion-bar">
+      <span class="paginacion-info">Página {{ page }} · {{ pageSize }} por página</span>
+      <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER DETALLE ══ -->
+  <div class="modal-overlay" *ngIf="productoConsultado" (click)="cerrarConsulta()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <div>
+            <h3>Detalle del producto</h3>
+            <p>Información completa del registro</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarConsulta()">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Información del producto</div>
+          <div class="detalle-grid">
+            <div class="detalle-item">
+              <span class="detalle-label">ID</span>
+              <span class="detalle-valor">#{{ productoConsultado.id }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-label">Nombre</span>
+              <span class="detalle-valor">{{ productoConsultado.nombre }}</span>
+            </div>
+            <div class="detalle-item span-2">
+              <span class="detalle-label">Descripción</span>
+              <span class="detalle-valor">{{ productoConsultado.descripcion || '—' }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-label">Proveedor</span>
+              <span class="detalle-valor">{{ productoConsultado.proveedores?.nombre || '—' }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-label">Usuario asignado</span>
+              <span class="detalle-valor">{{ productoConsultado.proveedores?.usuario?.nombre_completo || '—' }}</span>
+            </div>
+            <div class="detalle-item">
+              <span class="detalle-label">Doc. usuario</span>
+              <span class="detalle-valor">{{ productoConsultado.proveedores?.usuario?.numero_documento || '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CREAR / EDITAR ══ -->
+  <div class="modal-overlay" *ngIf="modalVisible" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24">
+              <ng-container *ngIf="!editando"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></ng-container>
+              <ng-container *ngIf="editando"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></ng-container>
+            </svg>
+          </div>
+          <div>
+            <h3>{{ editando ? 'Editar producto' : 'Nuevo producto' }}</h3>
+            <p>{{ editando ? 'Modifica los datos del registro' : 'Completa los datos del producto' }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModal()">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Datos del producto</div>
+          <div class="form-grid">
+
+            <div class="field" [class.field-error]="fieldErrors['nombre']">
+              <label>Nombre del producto</label>
+              <input placeholder="Ej: Caja de cartón" [(ngModel)]="productoForm.nombre"
+                     (ngModelChange)="clearError('nombre')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['nombre']">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {{ fieldErrors['nombre'] }}
+              </span>
+            </div>
+
+            <div class="field" [class.field-error]="fieldErrors['proveedores_id']">
+              <label>Proveedor</label>
+              <select [(ngModel)]="productoForm.proveedores_id"
+                      (ngModelChange)="clearError('proveedores_id')">
+                <option value="">Seleccione un proveedor</option>
+                <option *ngFor="let prov of data.proveedores" [value]="prov.id">
+                  {{ prov.nombre }}
+                </option>
+              </select>
+              <span class="field-error-msg" *ngIf="fieldErrors['proveedores_id']">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {{ fieldErrors['proveedores_id'] }}
+              </span>
+            </div>
+
+            <div class="field span-2" [class.field-error]="fieldErrors['descripcion']">
+              <label>Descripción <span class="label-opt">(opcional)</span></label>
+              <textarea rows="3" placeholder="Descripción del producto..."
+                        [(ngModel)]="productoForm.descripcion"
+                        (ngModelChange)="clearError('descripcion')"></textarea>
+              <span class="field-error-msg" *ngIf="fieldErrors['descripcion']">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                {{ fieldErrors['descripcion'] }}
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" (click)="guardarProducto()">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ editando ? 'Guardar cambios' : 'Crear producto' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando productos...</p>
+  </div>
+</ng-template>

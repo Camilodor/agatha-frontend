@@ -1,0 +1,357 @@
+<div class="vehiculos-container" *ngIf="data$ | async as data; else cargando">
+
+  <!-- ── Alerta ── -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    <svg viewBox="0 0 24 24">
+      <ng-container *ngIf="alertaTipo==='exito'"><polyline points="20 6 9 17 4 12"/></ng-container>
+      <ng-container *ngIf="alertaTipo==='error'"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></ng-container>
+    </svg>
+    {{ alertaMensaje }}
+    <button class="btn-cerrar-alerta" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h2>Gestión de Vehículos</h2>
+      <p>Administra la flota y sus conductores asignados</p>
+    </div>
+    <div class="page-header-right">
+      <div class="dropdown">
+        <button class="btn-secondary" (click)="toggleDropdown($event)">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <div class="dropdown-menu" *ngIf="dropdownOpen">
+          <button class="dropdown-item" (click)="exportarExcel(data.vehiculos)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Excel</button>
+          <button class="dropdown-item" (click)="exportarCSV(data.vehiculos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>CSV</button>
+          <button class="dropdown-item" (click)="exportarWord(data.vehiculos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>Word</button>
+          <button class="dropdown-item" (click)="exportarPDF(data.vehiculos)"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF</button>
+        </div>
+      </div>
+      <button class="btn-primary" (click)="abrirModal()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo vehículo
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filtros ── -->
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Buscar por placa..." [(ngModel)]="filtroPlaca" />
+    </div>
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <input type="text" placeholder="Buscar conductor..." [(ngModel)]="filtroConductor" />
+    </div>
+    <span class="filters-count">
+      <span>{{ vehiculosFiltrados(data.vehiculos).length }}</span> vehículos encontrados
+    </span>
+  </div>
+
+  <!-- ── Tabla ── -->
+  <div class="tabla-wrapper">
+    <table class="tabla-vehiculos">
+      <thead>
+        <tr>
+          <th (click)="ordenar('id')" [class.th-active]="sortColumn==='id'">
+            <span class="th-inner">ID <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th (click)="ordenar('numero_placas')" [class.th-active]="sortColumn==='numero_placas'">
+            <span class="th-inner">Placa <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th (click)="ordenar('nombre_marca_vehiculo')" [class.th-active]="sortColumn==='nombre_marca_vehiculo'">
+            <span class="th-inner">Marca / Modelo <svg class="sort-icon" viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg></span>
+          </th>
+          <th>Propietario</th>
+          <th>Conductor</th>
+          <th>SOAT</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="vehiculosFiltrados(data.vehiculos).length > 0; else sinResultados">
+          <tr *ngFor="let v of vehiculosFiltrados(data.vehiculos) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+
+            <td><span class="id-pill">#{{ v.id }}</span></td>
+
+            <td><span class="placa-badge">{{ v.numero_placas }}</span></td>
+
+            <td>
+              <div class="marca-cell">
+                <div class="marca-icon">
+                  <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                </div>
+                <div>
+                  <div style="font-weight:600;font-size:0.875rem;">{{ v.nombre_marca_vehiculo }}</div>
+                  <div style="font-size:0.75rem;color:var(--ag-gray-text);">{{ v.numero_modelo_anio }} · {{ v.color_vehiculo }}</div>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <div style="font-size:0.875rem;font-weight:500;">{{ v.nombre_propietario_vehiculo }}</div>
+              <div style="font-size:0.75rem;color:var(--ag-gray-text);">{{ v.documento_propietario_vehiculo }}</div>
+            </td>
+
+            <td>
+              <div class="conductor-cell" *ngIf="v.usuario; else sinConductor">
+                <div class="conductor-avatar">{{ getConductorInitials(v.usuario) }}</div>
+                <div class="conductor-info">
+                  <span class="conductor-nombre">{{ v.usuario?.nombres }} {{ v.usuario?.apellidos }}</span>
+                  <span class="conductor-doc">{{ v.usuario?.numero_documento }}</span>
+                </div>
+              </div>
+              <ng-template #sinConductor>
+                <span style="font-size:0.82rem;color:var(--ag-gray-text);">Sin asignar</span>
+              </ng-template>
+            </td>
+
+            <td>
+              <span class="soat-badge" [ngClass]="getSoatClass(v.fecha_vencimiento_soat)">
+                {{ getSoatLabel(v.fecha_vencimiento_soat) }}
+              </span>
+            </td>
+
+            <td>
+              <div class="acciones">
+                <button class="btn-row ver" (click)="consultarVehiculo(v.id)" title="Ver detalle">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button class="btn-row editar" (click)="abrirModal(v)" title="Editar">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="btn-row borrar" (click)="eliminarVehiculo(v.id)" title="Eliminar">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              </div>
+            </td>
+
+          </tr>
+        </ng-container>
+        <ng-template #sinResultados>
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              <p>No se encontraron vehículos con los filtros aplicados</p>
+            </div>
+          </td></tr>
+        </ng-template>
+      </tbody>
+    </table>
+    <div class="paginacion-bar">
+      <span class="paginacion-info">Página {{ page }} · {{ pageSize }} por página</span>
+      <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+    </div>
+  </div>
+
+  <!-- ══ MODAL VER DETALLE ══ -->
+  <div class="modal-overlay" *ngIf="vehiculoConsultado" (click)="cerrarConsulta()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div><h3>Detalle del vehículo</h3><p>{{ vehiculoConsultado.numero_placas }} · {{ vehiculoConsultado.nombre_marca_vehiculo }}</p></div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarConsulta()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="form-section-title">Vehículo</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Placa</span><span class="detalle-valor">{{ vehiculoConsultado.numero_placas }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Marca</span><span class="detalle-valor">{{ vehiculoConsultado.nombre_marca_vehiculo }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Modelo</span><span class="detalle-valor">{{ vehiculoConsultado.numero_modelo_anio }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Color</span><span class="detalle-valor">{{ vehiculoConsultado.color_vehiculo }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Capacidad carga</span><span class="detalle-valor">{{ vehiculoConsultado.capacidad_carga }} kg</span></div>
+            <div class="detalle-item"><span class="detalle-label">Venc. SOAT</span><span class="detalle-valor">{{ vehiculoConsultado.fecha_vencimiento_soat }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Venc. Tecno</span><span class="detalle-valor">{{ vehiculoConsultado.fecha_vencimiento_tecno }}</span></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title">Propietario</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Nombre</span><span class="detalle-valor">{{ vehiculoConsultado.nombre_propietario_vehiculo }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Documento</span><span class="detalle-valor">{{ vehiculoConsultado.documento_propietario_vehiculo }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Celular</span><span class="detalle-valor">{{ vehiculoConsultado.numero_celular_propietario }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Ciudad</span><span class="detalle-valor">{{ vehiculoConsultado.ciudad_propietario }}</span></div>
+            <div class="detalle-item span-2"><span class="detalle-label">Dirección</span><span class="detalle-valor">{{ vehiculoConsultado.direccion_propietario }}</span></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="form-section-title">Conductor asignado</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Nombre</span><span class="detalle-valor">{{ vehiculoConsultado.usuario?.nombres }} {{ vehiculoConsultado.usuario?.apellidos }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Documento</span><span class="detalle-valor">{{ vehiculoConsultado.usuario?.numero_documento }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Celular</span><span class="detalle-valor">{{ vehiculoConsultado.usuario?.celular }}</span></div>
+          </div>
+        </div>
+        <div class="form-section" *ngIf="vehiculoConsultado.nombre_satelital">
+          <div class="form-section-title">Satelital</div>
+          <div class="detalle-grid">
+            <div class="detalle-item"><span class="detalle-label">Plataforma</span><span class="detalle-valor">{{ vehiculoConsultado.nombre_satelital }}</span></div>
+            <div class="detalle-item"><span class="detalle-label">Usuario</span><span class="detalle-valor">{{ vehiculoConsultado.usuario_satelital }}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL CREAR / EDITAR ══ -->
+  <div class="modal-overlay" *ngIf="modalVisible" (click)="cerrarModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-header-left">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24">
+              <ng-container *ngIf="!editando"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></ng-container>
+              <ng-container *ngIf="editando"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></ng-container>
+            </svg>
+          </div>
+          <div>
+            <h3>{{ editando ? 'Editar vehículo' : 'Nuevo vehículo' }}</h3>
+            <p>{{ editando ? 'Modifica los datos del registro' : 'Completa los datos del vehículo' }}</p>
+          </div>
+        </div>
+        <button class="btn-modal-close" (click)="cerrarModal()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Conductor -->
+        <div class="form-section">
+          <div class="form-section-title">Conductor asignado</div>
+          <div class="form-grid">
+            <div class="field span-2" [class.field-error]="fieldErrors['numero_documento']">
+              <label>Número de documento del conductor</label>
+              <input placeholder="Ej: 1234567890 (debe existir como usuario en el sistema)" [(ngModel)]="vehiculoForm.numero_documento" (ngModelChange)="clearError('numero_documento')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_documento']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['numero_documento'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Datos vehículo -->
+        <div class="form-section">
+          <div class="form-section-title">Datos del vehículo</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['numero_placas']">
+              <label>Número de placas</label>
+              <input placeholder="Ej: ABC-123" [(ngModel)]="vehiculoForm.numero_placas" (ngModelChange)="clearError('numero_placas')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_placas']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['numero_placas'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['nombre_marca_vehiculo']">
+              <label>Marca</label>
+              <input placeholder="Ej: Chevrolet" [(ngModel)]="vehiculoForm.nombre_marca_vehiculo" (ngModelChange)="clearError('nombre_marca_vehiculo')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['nombre_marca_vehiculo']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['nombre_marca_vehiculo'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['numero_modelo_anio']">
+              <label>Modelo (año)</label>
+              <input placeholder="Ej: 2022" [(ngModel)]="vehiculoForm.numero_modelo_anio" (ngModelChange)="clearError('numero_modelo_anio')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_modelo_anio']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['numero_modelo_anio'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['color_vehiculo']">
+              <label>Color</label>
+              <input placeholder="Ej: Blanco" [(ngModel)]="vehiculoForm.color_vehiculo" (ngModelChange)="clearError('color_vehiculo')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['color_vehiculo']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['color_vehiculo'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['capacidad_carga']">
+              <label>Capacidad carga (kg) <span class="label-opt">(opcional)</span></label>
+              <input type="number" placeholder="Ej: 5000" [(ngModel)]="vehiculoForm.capacidad_carga" (ngModelChange)="clearError('capacidad_carga')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['capacidad_carga']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['capacidad_carga'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Documentos y fechas -->
+        <div class="form-section">
+          <div class="form-section-title">Documentos legales</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['fecha_vencimiento_soat']">
+              <label>Vencimiento SOAT</label>
+              <input type="date" [(ngModel)]="vehiculoForm.fecha_vencimiento_soat" (ngModelChange)="clearError('fecha_vencimiento_soat')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['fecha_vencimiento_soat']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['fecha_vencimiento_soat'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['fecha_vencimiento_tecno']">
+              <label>Vencimiento Tecno-mecánica</label>
+              <input type="date" [(ngModel)]="vehiculoForm.fecha_vencimiento_tecno" (ngModelChange)="clearError('fecha_vencimiento_tecno')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['fecha_vencimiento_tecno']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['fecha_vencimiento_tecno'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Propietario -->
+        <div class="form-section">
+          <div class="form-section-title">Propietario</div>
+          <div class="form-grid">
+            <div class="field" [class.field-error]="fieldErrors['nombre_propietario_vehiculo']">
+              <label>Nombre</label>
+              <input placeholder="Nombre completo" [(ngModel)]="vehiculoForm.nombre_propietario_vehiculo" (ngModelChange)="clearError('nombre_propietario_vehiculo')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['nombre_propietario_vehiculo']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['nombre_propietario_vehiculo'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['documento_propietario_vehiculo']">
+              <label>Documento</label>
+              <input placeholder="N° documento" [(ngModel)]="vehiculoForm.documento_propietario_vehiculo" (ngModelChange)="clearError('documento_propietario_vehiculo')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['documento_propietario_vehiculo']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['documento_propietario_vehiculo'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['numero_celular_propietario']">
+              <label>Celular</label>
+              <input placeholder="Ej: 3001234567" [(ngModel)]="vehiculoForm.numero_celular_propietario" (ngModelChange)="clearError('numero_celular_propietario')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['numero_celular_propietario']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['numero_celular_propietario'] }}</span>
+            </div>
+            <div class="field" [class.field-error]="fieldErrors['ciudad_propietario']">
+              <label>Ciudad</label>
+              <input placeholder="Ciudad" [(ngModel)]="vehiculoForm.ciudad_propietario" (ngModelChange)="clearError('ciudad_propietario')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['ciudad_propietario']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['ciudad_propietario'] }}</span>
+            </div>
+            <div class="field span-2" [class.field-error]="fieldErrors['direccion_propietario']">
+              <label>Dirección</label>
+              <input placeholder="Dirección completa" [(ngModel)]="vehiculoForm.direccion_propietario" (ngModelChange)="clearError('direccion_propietario')" />
+              <span class="field-error-msg" *ngIf="fieldErrors['direccion_propietario']"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ fieldErrors['direccion_propietario'] }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Satelital -->
+        <div class="form-section">
+          <div class="form-section-title">Satelital <span class="label-opt" style="font-size:0.68rem;">(opcional)</span></div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Plataforma</label>
+              <input placeholder="Ej: GPS Track" [(ngModel)]="vehiculoForm.nombre_satelital" />
+            </div>
+            <div class="field">
+              <label>Usuario satelital</label>
+              <input placeholder="Usuario" [(ngModel)]="vehiculoForm.usuario_satelital" />
+            </div>
+            <div class="field">
+              <label>Contraseña satelital</label>
+              <input type="password" placeholder="Contraseña" [(ngModel)]="vehiculoForm.contrasena_satelital" />
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+        <button class="btn-guardar" (click)="guardarVehiculo()">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          {{ editando ? 'Guardar cambios' : 'Registrar vehículo' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando vehículos...</p>
+  </div>
+</ng-template>

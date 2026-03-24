@@ -1,0 +1,96 @@
+<div class="tiposrol-container" *ngIf="data$ | async as roles; else cargando">
+  <h2>📑 Gestión de Tipos de Rol</h2>
+
+  <!-- 🔔 Alertas -->
+  <div *ngIf="alertaVisible" class="alerta" [ngClass]="alertaTipo">
+    {{ alertaMensaje }}
+    <button class="cerrar" (click)="cerrarAlerta()">×</button>
+  </div>
+
+  <!-- Botones de descargas -->
+  <div class="descargas-container">
+    <div class="dropdown" (click)="$event.stopPropagation()">
+      <button class="btn-nuevo1" (click)="toggleDropdown($event)">⬇️ Descargas</button>
+      <ul class="dropdown-menu" *ngIf="dropdownOpen">
+        <li><a class="dropdown-item" (click)="exportarExcel(roles)">📊 Excel</a></li>
+        <li><a class="dropdown-item" (click)="exportarCSV(roles)">📄 CSV</a></li>
+        <li><a class="dropdown-item" (click)="exportarWord(roles)">📝 Word</a></li>
+        <li><a class="dropdown-item" (click)="exportarPDF(roles)">📕 PDF</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Barra de acciones -->
+  <div class="acciones-bar">
+    <button class="btn-nuevo" (click)="abrirModal()">➕ Nuevo Rol</button>
+    <div class="buscadores">
+        <div class="buscador">
+        <i class="fas fa-box"></i>
+      <input type="text" placeholder="Buscar por nombre..." [(ngModel)]="filtroNombre"/>
+        </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="tabla-wrapper">
+    <table class="tabla-tiposrol">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of rolesFiltrados(roles) | paginate: { itemsPerPage: pageSize, currentPage: page }">
+          <td>{{ r.id }}</td>
+          <td>{{ r.nombre }}</td>
+          <td>
+            <button class="btn-accion consultar" (click)="consultarRol(r.id)"></button>
+            <button class="btn-accion editar" (click)="abrirModal(r)"></button>
+            <button class="btn-accion eliminar" (click)="eliminarRol(r.id)"></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <pagination-controls (pageChange)="page = $event" class="paginacion"></pagination-controls>
+
+  <!-- Modal de consulta -->
+  <div class="modal" *ngIf="rolConsultado">
+    <div class="modal-content">
+      <h3>📑 Detalles del Rol</h3>
+      <ul class="detalles-tiporol">
+      <ul>
+        <li><strong>ID:</strong> {{ rolConsultado.id }}</li>
+        <li><strong>Nombre:</strong> {{ rolConsultado.nombre }}</li>
+      </ul>
+      </ul>
+      <div class="modal-buttons">
+      <button class="btn-cancelar" (click)="cerrarConsulta()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de crear/editar -->
+  <div class="modal" *ngIf="modalVisible">
+    <div class="modal-content">
+      <h3>{{ editando ? '✏️ Editar Rol' : '➕ Nuevo Rol' }}</h3>
+      <div class="form-grid">
+        <input placeholder="Nombre del rol" [(ngModel)]="rolForm.nombre" required />
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-guardar" (click)="guardarRol()">{{ editando ? 'Actualizar' : 'Crear' }}</button>
+        <button class="btn-cancelar" (click)="cerrarModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #cargando>
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Cargando tipos de rol...</p>
+  </div>
+</ng-template>

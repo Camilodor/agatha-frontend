@@ -1,0 +1,79 @@
+<div class="dashboard-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+  <!-- Info del usuario -->
+  <div class="user-info">
+    <img src="assets/admin.png" alt="Usuario" class="avatar" />
+    <p>Administrador</p>
+  </div>
+
+  <!-- Menú -->
+  <nav>
+    <ul class="menu">
+      <li class="menu-item" routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        🏠 <span>Inicio</span>
+      </li>
+      <li class="menu-item" routerLink="/usuarios" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        👤 <span>Usuarios</span>
+      </li>
+      <li class="menu-item" routerLink="/vehiculos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        🚚 <span>Vehículos</span>
+      </li>
+      <li class="menu-item" routerLink="/proveedores" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        🏭 <span>Proveedores</span>
+      </li>
+      <li class="menu-item" routerLink="/productos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        📦 <span>Productos</span>
+      </li>
+      <li class="menu-item" routerLink="/mercancias" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        📦 <span>Mercancías</span>
+      </li>
+      <li class="menu-item" routerLink="/despachos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        🚛 <span>Despachos</span>
+      </li>
+      <li class="menu-item" routerLink="/entregas" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        📬 <span>Entregas</span>
+      </li>
+      <li class="menu-item" routerLink="/devoluciones" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        ↩️ <span>Devoluciones</span>
+      </li>
+      <li class="menu-item" routerLink="/seguimientos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        🔎 <span>Seguimientos</span>
+      </li>
+      <li class="menu-item" routerLink="/tipodocumentos" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        📄 <span>Tipos documento</span>
+      </li>
+      <li class="menu-item" routerLink="/tiporol" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        ⚙️ <span>Tipos rol</span>
+      </li>
+      <li class="menu-item" routerLink="/tipospago" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        💳 <span>Tipos pago</span>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Botón de cerrar sesión -->
+  <button class="logout" (click)="logout()">Cerrar sesión</button>
+</aside>
+
+
+
+  <!-- Main content -->
+  <div class="main-content">
+    <!-- Header -->
+    <header class="header">
+      <img src="assets/sox-logo.png" alt="Sox Logo" class="logo-header" />
+      <h1>Sox</h1>
+    </header>
+
+    <!-- Body: aquí se cargan los componentes hijos -->
+    <section class="content">
+      <router-outlet></router-outlet>
+    </section>
+
+    <!-- Footer -->
+   <footer class="footer">
+      <p>© 2025 Sox. Sistema de gestión y control de logística. Todos los derechos reservados.</p>
+    </footer>
+  </div>
+</div>
